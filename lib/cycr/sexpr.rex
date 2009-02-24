@@ -1,4 +1,4 @@
-class SExpressionLexer
+class Cyc::SExpressionLexer
 
 option
   independent

@@ -1,0 +1,4 @@
+0.0.1
+- namespace changed to Cyc
+- gem name changed to cycr
+- server changed to client :-) 

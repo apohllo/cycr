@@ -9,12 +9,16 @@ Gem::Specification.new do |s|
   s.has_rdoc = false
   s.authors = ['Aleksander Pohl']
   s.files = ["Rakefile", 
-    "cyc.gemspec", 
-    'lib/cyc.rb', 
-    'lib/cyc/node.rb', 
-    'lib/cyc/constants.rb', 
-    'lib/cyc/sexpr.rex.rb', 
-    'lib/cyc/server.rb'
+    "cycr.gemspec", 
+    'lib/cycr.rb', 
+    'lib/cycr/collection.rb', 
+    'lib/cycr/constants.rb', 
+    'lib/cycr/sexpr.rex.rb', 
+    'lib/cycr/client.rb',
+    'lib/cycr/extensions.rb',
+    'lib/cycr/nart.rb',
+    'lib/cycr/words_reader.lisp',
+    'lib/cycr/domains.lisp'
   ]  
   s.test_files = [
   ]
