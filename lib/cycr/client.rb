@@ -11,17 +11,35 @@ module Cyc
     attr_accessor :debug
     # Creates new Client. 
     def initialize
-      @conn = Net::Telnet.new("Port" => 3601, "Telnetmode" => false,
-        "Timeout" => 600)
+      @pid = Process.pid
       @lexer = SExpressionLexer.new 
       @mts_cache = {}
+      # read domains mapings
+      talk(File.read(File.join(
+        File.dirname(__FILE__), 'domains.lisp')))
+
+      # read utility functions
       talk(File.read(File.join(
         File.dirname(__FILE__), 'words_reader.lisp')))
 
-      # read domains mapings
-#      talk(File.read(File.join(
-#        File.dirname(__FILE__), 'domains.lisp')))
+      # wait untill files are processed
+      send_message("(define end-of-routines ())")
+      while answer = receive_answer do
+        break if answer =~ /END-OF-ROUTINES/
+      end
     end
+
+    def conn
+      #puts "#{@pid} #{Process.pid}"
+      if @conn.nil? or @pid != Process.pid
+        @pid = Process.pid
+        @conn = Net::Telnet.new("Port" => 3601, "Telnetmode" => false,
+          "Timeout" => 600)
+      end
+      @conn 
+    end
+
+    protected :conn
 
     def clear_cache
       @mts_cache = {}
@@ -29,7 +47,7 @@ module Cyc
 
     # Closes connection with the server
     def close
-      @conn.puts("(api-quit)")
+      conn.puts("(api-quit)")
       @conn = nil
     end
 
@@ -42,19 +60,32 @@ module Cyc
     END
 
 
-    # Sends message directly to the Cyc server.
+    # Sends message +msg+ directly to the Cyc server and receives 
+    # the answer. 
     def talk(msg, options={})
-      #@conn.puts(msg.respond_to?(:to_cyc) ? msg.to_cyc : msg)
+      #conn.puts(msg.respond_to?(:to_cyc) ? msg.to_cyc : msg)
       msg = NART_QUERY.sub(/:call/,msg) if options[:nart]
 
+      send_message(msg)
+      receive_answer(options)
+    end
+
+    # Send the raw message.
+    def send_message(msg) 
       puts "Send: #{msg}" if @debug
-      @conn.puts(msg)
-      answer = @conn.waitfor(/\d\d\d/)
+      conn.puts(msg)
+    end
+
+    # Receive answer from server.
+    def receive_answer(options={})
+      answer = conn.waitfor(/\d\d\d/)
       puts "Recv: #{answer}" if @debug
       return answer if answer.nil?
-      answer = answer.sub(/(\d\d\d) (.*)\n/,"\\2")
+      # XXX ignore some potential asynchronous answers
+      answer = answer.split("\n")[-1]
+      answer = answer.sub(/(\d\d\d) (.*)/,"\\2")
       if($1.to_i == 200)
-        result = parse answer
+        result = parse(answer)
         options[:nart] ? substitute_narts(result) : result
       else
         unless $2.nil?
