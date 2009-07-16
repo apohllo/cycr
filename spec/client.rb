@@ -3,7 +3,7 @@ require 'lib/cycr'
 describe Cyc::Client do
   before(:each) do  
     @client = Cyc::Client.new()
-    #@client.debug = true
+#    @client.debug = true
   end
 
   after(:each) do 
