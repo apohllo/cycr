@@ -72,6 +72,7 @@ module Cyc
 
     # Send the raw message.
     def send_message(msg) 
+      @last_message = msg
       puts "Send: #{msg}" if @debug
       conn.puts(msg)
     end
@@ -89,7 +90,8 @@ module Cyc
         options[:nart] ? substitute_narts(result) : result
       else
         unless $2.nil?
-          puts $2.sub(/^"/,"").sub(/"$/,"")
+          puts $2.sub(/^"/,"").sub(/"$/,"") + "\n" +
+            @last_message
         else
           puts "unknown error!"
         end
@@ -100,25 +102,19 @@ module Cyc
 
     def method_missing(name,*args)
       #"_missing_method_#{name}"
-      method_name = name.to_s.gsub("_","-")
-      def method_name.to_cyc
-        self.sub(/-nart$/,"")
-      end
+      method_name = name.to_s.gsub("_","-").sub(/-nart$/,"")
       options = {}
       options[:nart] = true if name.to_s =~ /_nart$/
         talk(([method_name] + args).to_cyc,options)
     end
 
     DENOTATION_QUERY =<<-END
-      (clet ((result ())) 
-        (cdolist (el (denotation-mapper ":word"))
-          (pif (nart-p (cdr el)) 
-            (cpush (nart-id (cdr el)) result) 
-            (cpush (cdr el) result))) result)
+      (nart-denotation-mapper ":word")
     END
 
     def denotation_mapper(name)
-      talk(DENOTATION_QUERY.sub(/:word/,name),:nart => true)
+      send_message(DENOTATION_QUERY.sub(/:word/,name))
+      receive_answer(:nart => true)
     end
 
 
