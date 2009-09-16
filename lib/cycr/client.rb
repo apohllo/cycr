@@ -10,17 +10,19 @@ module Cyc
     # to standard output
     attr_accessor :debug
     # Creates new Client. 
-    def initialize
-      @conn = Net::Telnet.new("Port" => 3601, "Telnetmode" => false,
-        "Timeout" => 600)
+    def initialize(host="localhost",port="3601")
+      @conn = Net::Telnet.new("Port" => port, "Telnetmode" => false,
+        "Timeout" => 600, "Host" => host)
       @lexer = SExpressionLexer.new 
       @mts_cache = {}
+
+      # read domains mapings
+      talk(File.read(File.join(
+        File.dirname(__FILE__), 'domains.lisp')))
+      # read utility functions
       talk(File.read(File.join(
         File.dirname(__FILE__), 'words_reader.lisp')))
 
-      # read domains mapings
-#      talk(File.read(File.join(
-#        File.dirname(__FILE__), 'domains.lisp')))
     end
 
     def clear_cache
