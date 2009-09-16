@@ -3,7 +3,7 @@ require 'lib/cycr'
 describe Cyc::Client do
   before(:each) do  
     @client = Cyc::Client.new()
-    #@client.debug = true
+#    @client.debug = true
   end
 
   after(:each) do 
@@ -23,5 +23,17 @@ describe Cyc::Client do
     cat.should_not == nil
     cat.should be_instance_of(Cyc::Collection)
     cat.symbol.should == :Cat
+  end
+
+  it "should allow multiple processes to work use the client" do 
+    parent_pid = Process.pid
+    if fork
+      @client.find_collection("Cat")
+    else
+      @client.find_collection("Dog")
+    end
+    if Process.pid == parent_pid
+      Process.waitall
+    end
   end
 end

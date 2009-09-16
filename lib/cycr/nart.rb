@@ -6,7 +6,7 @@ module Cyc
       @value = cyc.find_nart_by_id @id
     end
 
-    def to_cyc
+    def to_cyc(quote=false)
       "(find-nart-by-id #{@id})"
     end
 

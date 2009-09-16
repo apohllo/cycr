@@ -194,3 +194,11 @@
 
 (define any-assertion? (term mt)
   (with-mt mt (pif (gather-index term) T ())))
+
+(define nart-denotation-mapper (word) 
+  (clet ((result ())) 
+        (cdolist (el (denotation-mapper word))
+                 (pif (nart-p (cdr el)) 
+                      (cpush (nart-id (cdr el)) result) 
+                      (cpush (cdr el) result))) result
+        (ret result)))

@@ -11,19 +11,38 @@ module Cyc
     attr_accessor :debug
     # Creates new Client. 
     def initialize(host="localhost",port="3601")
-      @conn = Net::Telnet.new("Port" => port, "Telnetmode" => false,
-        "Timeout" => 600, "Host" => host)
+      @host = host
+      @port = port
+      @pid = Process.pid
       @lexer = SExpressionLexer.new 
       @mts_cache = {}
 
       # read domains mapings
       talk(File.read(File.join(
         File.dirname(__FILE__), 'domains.lisp')))
+
       # read utility functions
       talk(File.read(File.join(
         File.dirname(__FILE__), 'words_reader.lisp')))
 
+      # wait untill files are processed
+      send_message("(define end-of-routines ())")
+      while answer = receive_answer do
+        break if answer =~ /END-OF-ROUTINES/
+      end
     end
+
+    def conn
+      #puts "#{@pid} #{Process.pid}"
+      if @conn.nil? or @pid != Process.pid
+        @pid = Process.pid
+        @conn = Net::Telnet.new("Port" => @port, "Telnetmode" => false,
+          "Timeout" => 600, "Host" => @host)
+      end
+      @conn 
+    end
+
+    protected :conn
 
     def clear_cache
       @mts_cache = {}
@@ -31,36 +50,57 @@ module Cyc
 
     # Closes connection with the server
     def close
-      @conn.puts("(api-quit)")
+      conn.puts("(api-quit)")
       @conn = nil
     end
 
     NART_QUERY =<<-END
-      (clet ((result ())) 
-        (cdolist (el :call) 
-          (pif (nart-p el) 
-            (cpush (nart-id el) result) 
-            (cpush el result))) result)
+      (clet ((result ())
+        (call-value :call)) 
+        (pif (listp call-value)
+          (cdolist (el call-value) 
+            (pif (nart-p el) 
+              (cpush (nart-id el) result) 
+              (cpush el result))) 
+          (pif (nart-p call-value)
+              (cpush (nart-id call-value) result)
+              (cpush call-value result)))
+        result)
     END
 
 
-    # Sends message directly to the Cyc server.
+    # Sends message +msg+ directly to the Cyc server and receives 
+    # the answer. 
     def talk(msg, options={})
-      #@conn.puts(msg.respond_to?(:to_cyc) ? msg.to_cyc : msg)
+      #conn.puts(msg.respond_to?(:to_cyc) ? msg.to_cyc : msg)
       msg = NART_QUERY.sub(/:call/,msg) if options[:nart]
 
+      send_message(msg)
+      receive_answer(options)
+    end
+
+    # Send the raw message.
+    def send_message(msg) 
+      @last_message = msg
       puts "Send: #{msg}" if @debug
-      @conn.puts(msg)
-      answer = @conn.waitfor(/\d\d\d/)
+      conn.puts(msg)
+    end
+
+    # Receive answer from server.
+    def receive_answer(options={})
+      answer = conn.waitfor(/\d\d\d/)
       puts "Recv: #{answer}" if @debug
       return answer if answer.nil?
-      answer = answer.sub(/(\d\d\d) (.*)\n/,"\\2")
+      # XXX ignore some potential asynchronous answers
+      answer = answer.split("\n")[-1]
+      answer = answer.sub(/(\d\d\d) (.*)/,"\\2")
       if($1.to_i == 200)
-        result = parse answer
+        result = parse(answer)
         options[:nart] ? substitute_narts(result) : result
       else
         unless $2.nil?
-          puts $2.sub(/^"/,"").sub(/"$/,"")
+          puts $2.sub(/^"/,"").sub(/"$/,"") + "\n" +
+            @last_message
         else
           puts "unknown error!"
         end
@@ -71,25 +111,22 @@ module Cyc
 
     def method_missing(name,*args)
       #"_missing_method_#{name}"
-      method_name = name.to_s.gsub("_","-")
-      def method_name.to_cyc
-        self.sub(/-nart$/,"")
-      end
+      method_name = name.to_s.gsub("_","-").sub(/-nart$/,"")
       options = {}
+      def method_name.to_cyc(quote=false)
+        self
+      end
       options[:nart] = true if name.to_s =~ /_nart$/
         talk(([method_name] + args).to_cyc,options)
     end
 
     DENOTATION_QUERY =<<-END
-      (clet ((result ())) 
-        (cdolist (el (denotation-mapper ":word"))
-          (pif (nart-p (cdr el)) 
-            (cpush (nart-id (cdr el)) result) 
-            (cpush (cdr el) result))) result)
+      (nart-denotation-mapper ":word")
     END
 
     def denotation_mapper(name)
-      talk(DENOTATION_QUERY.sub(/:word/,name),:nart => true)
+      send_message(DENOTATION_QUERY.sub(/:word/,name))
+      receive_answer(:nart => true)
     end
 
 
