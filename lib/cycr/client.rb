@@ -10,7 +10,8 @@ module Cyc
     # to standard output
     attr_accessor :debug
     # Creates new Client. 
-    def initialize(host="localhost",port="3601")
+    def initialize(host="localhost",port="3601",debug=false)
+      @debug = debug
       @host = host
       @port = port
       @pid = Process.pid
@@ -88,7 +89,10 @@ module Cyc
 
     # Receive answer from server.
     def receive_answer(options={})
-      answer = conn.waitfor(/\d\d\d/)
+      answer = conn.waitfor(/./)
+      while not answer =~ /\n/ do
+        answer += conn.waitfor(/./)
+      end
       puts "Recv: #{answer}" if @debug
       return answer if answer.nil?
       # XXX ignore some potential asynchronous answers
