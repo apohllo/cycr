@@ -52,11 +52,17 @@ module Cyc
     end
 
     NART_QUERY =<<-END
-      (clet ((result ())) 
-        (cdolist (el :call) 
-          (pif (nart-p el) 
-            (cpush (nart-id el) result) 
-            (cpush el result))) result)
+      (clet ((result ())
+        (call-value :call)) 
+        (pif (listp call-value)
+          (cdolist (el call-value) 
+            (pif (nart-p el) 
+              (cpush (nart-id el) result) 
+              (cpush el result))) 
+          (pif (nart-p call-value)
+              (cpush (nart-id call-value) result)
+              (cpush call-value result)))
+        result)
     END
 
 
@@ -104,6 +110,9 @@ module Cyc
       #"_missing_method_#{name}"
       method_name = name.to_s.gsub("_","-").sub(/-nart$/,"")
       options = {}
+      def method_name.to_cyc(quote=false)
+        self
+      end
       options[:nart] = true if name.to_s =~ /_nart$/
         talk(([method_name] + args).to_cyc,options)
     end
