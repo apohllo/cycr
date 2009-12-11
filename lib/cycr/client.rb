@@ -19,15 +19,15 @@ module Cyc
       @mts_cache = {}
 
       # read domains mapings
-      talk(File.read(File.join(
-        File.dirname(__FILE__), 'domains.lisp')))
+#      talk(File.read(File.join(
+#        File.dirname(__FILE__), 'domains.lisp')))
 
       # read utility functions
       talk(File.read(File.join(
         File.dirname(__FILE__), 'words_reader.lisp')))
 
       # wait untill files are processed
-      send_message("(define end-of-routines ())")
+      send_message("(define end-of-routines () ())")
       while answer = receive_answer do
         break if answer =~ /END-OF-ROUTINES/
       end
