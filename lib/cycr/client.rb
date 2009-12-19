@@ -90,11 +90,20 @@ module Cyc
     # Receive answer from server.
     def receive_answer(options={})
       answer = conn.waitfor(/./)
-      while not answer =~ /\n/ do
-        answer += conn.waitfor(/./)
-      end
       puts "Recv: #{answer}" if @debug
-      return answer if answer.nil?
+      if answer.nil?
+        raise "Unknwon error occured. " +
+          "Check the submitted query in detail!"
+      end
+      while not answer =~ /\n/ do
+        next_answer = conn.waitfor(/./)
+        puts "Recv: #{next_answer}" if @debug
+        if answer.nil?
+          answer = next_answer
+        else
+          answer += next_answer
+        end
+      end
       # XXX ignore some potential asynchronous answers
       answer = answer.split("\n")[-1]
       answer = answer.sub(/(\d\d\d) (.*)/,"\\2")
