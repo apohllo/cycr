@@ -34,17 +34,36 @@ module Cyc
       end
     end
 
-    def conn
-      #puts "#{@pid} #{Process.pid}"
-      if @conn.nil? or @pid != Process.pid
-        @pid = Process.pid
-        @conn = Net::Telnet.new("Port" => @port, "Telnetmode" => false,
-          "Timeout" => 600, "Host" => @host)
-      end
-      @conn 
+    # (Re)connects to the cyc server.
+    def reconnect
+      @pid = Process.pid
+      @conn = Net::Telnet.new("Port" => @port, "Telnetmode" => false,
+                              "Timeout" => 600, "Host" => @host)
     end
 
-    protected :conn
+    # Returns the connection object. Ensures that the pid of current
+    # process is the same as the pid, the connection was initialized with.
+    # 
+    # If the block is given, the command is guarded by assertion, that
+    # it will be performed, even if the connection was reset.
+    def connection
+      #puts "#{@pid} #{Process.pid}"
+      if @conn.nil? or @pid != Process.pid
+        reconnect
+      end
+      if block_given?
+        begin
+          yield @conn
+        rescue Errno::ECONNRESET
+          reconnect
+          yield @conn
+        end
+      else
+        @conn 
+      end
+    end
+
+    protected :connection, :reconnect
 
     def clear_cache
       @mts_cache = {}
@@ -52,7 +71,7 @@ module Cyc
 
     # Closes connection with the server
     def close
-      conn.puts("(api-quit)")
+      connection{|c| c.puts("(api-quit)")}
       @conn = nil
     end
 
@@ -85,19 +104,19 @@ module Cyc
     def send_message(msg) 
       @last_message = msg
       puts "Send: #{msg}" if @debug
-      conn.puts(msg)
+      connection{|c| c.puts(msg)}
     end
 
     # Receive answer from server.
     def receive_answer(options={})
-      answer = conn.waitfor(/./)
+      answer = connection{|c| c.waitfor(/./)}
       puts "Recv: #{answer}" if @debug
       if answer.nil?
         raise "Unknwon error occured. " +
           "Check the submitted query in detail!"
       end
       while not answer =~ /\n/ do
-        next_answer = conn.waitfor(/./)
+        next_answer = connection{|c| c.waitfor(/./)}
         puts "Recv: #{next_answer}" if @debug
         if answer.nil?
           answer = next_answer
@@ -134,7 +153,7 @@ module Cyc
         talk(([method_name] + args).to_cyc,options)
     end
 
-    DENOTATION_QUERY =<<-END
+    DENOTATION_QUERY =<<-END 
       (nart-denotation-mapper ":word")
     END
 
@@ -193,6 +212,9 @@ protected
          else
            []
          end)
+    end
+
+    def with_reconnect
     end
   end
 end
