@@ -9,6 +9,7 @@ module Cyc
     # If set to true, all communication with the server is logged
     # to standard output
     attr_accessor :debug
+    attr_reader :host, :port
     # Creates new Client. 
     def initialize(host="localhost",port="3601",debug=false)
       @debug = debug
