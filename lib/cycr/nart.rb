@@ -11,7 +11,11 @@ module Cyc
     end
 
     def to_s
-      "NART: #{@value.inspect} "
+      "NART[#{@id}]: #{@value.inspect} "
+    end
+
+    def self.find_by_name(name,cyc)
+      self.new(name.match(/^NART\[([^\]]+)\]/)[1],cyc)
     end
   end
 end
