@@ -1,4 +1,20 @@
+0.0.3
+- support for assertions
+0.0.2
+- NARTs accessible via their names
+- parser extracted into separate file
 0.0.1
 - namespace changed to Cyc
 - gem name changed to cycr
 - server changed to client :-) 
+- allow for reconnection
+- host and port of client are readable
+- fix: multiline answer
+- fix: empty answer
+- fix: loading of predefined routines
+- fix: waiting for newline before processing answer
+- basic support for NARTs
+- basic configuration of host and port
+- denotation query added
+- support for quotation in message
+- running in multiple processes creates independent connectors
