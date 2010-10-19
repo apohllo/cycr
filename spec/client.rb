@@ -25,7 +25,7 @@ describe Cyc::Client do
     cat.symbol.should == :Cat
   end
 
-  it "should allow multiple processes to work use the client" do 
+  it "should allow multiple processes to use the client" do 
     parent_pid = Process.pid
     if fork
       @client.find_collection("Cat")
