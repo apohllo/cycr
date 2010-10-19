@@ -101,7 +101,7 @@ module Cyc
     end
 
     # Send the raw message.
-    def send_message(msg) 
+    def send_message(msg)
       @last_message = msg
       puts "Send: #{msg}" if @debug
       connection{|c| c.puts(msg)}
@@ -128,8 +128,21 @@ module Cyc
       answer = answer.split("\n")[-1]
       answer = answer.sub(/(\d\d\d) (.*)/,"\\2")
       if($1.to_i == 200)
-        result = @parser.parse(answer)
-        options[:nart] ? substitute_narts(result) : result
+        begin
+          result = @parser.parse(answer,options[:stack])
+          result = options[:nart] ? substitute_narts(result) : result
+        rescue Parser::ContinueParsing => ex
+          result = ex.stack
+          current_result = result
+          last_message = @last_message
+          while current_result.size == 100 do
+            send_message("(subseq #{last_message} #{result.size} " +
+                         "#{result.size + 100})")
+            current_result = receive_answer(options)
+            result.concat(current_result)
+          end
+          result
+        end
       else
         unless $2.nil?
           puts $2.sub(/^"/,"").sub(/"$/,"") + "\n" +
