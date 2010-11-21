@@ -8,7 +8,7 @@ macro
   INPUT_CHARACTER       [^\r\n\"\(\):& ]
   WHITE_SPACE           [\ \t\f\r\n] | \r\n
   SYMBOL                :[^<>\r\n\"\(\):&\ ]+
-  CYC_SYMBOL            \#\$[a-zA-Z0-9-]+
+  CYC_SYMBOL            \#\$[a-zA-Z0-9:_-]+
   ATOM                  [^\r\n\"\(\):&\ ]+
   OPEN_PAR              \(
   CLOSE_PAR             \)
@@ -37,13 +37,13 @@ rule
                         {QUOTE}           { state = :STRING; @str = ""; [:in_string] }
                         # whitespace 
                         {WHITE_SPACE}     # ignore 
-  :STRING               {QUOTE}           { state = nil; [:string,@str] }
   :STRING               [^\n\r\"\\]+      { @str << text; [:in_string]}
-  :STRING               \t               { @str << '\t'; [:in_string] }
-  :STRING               \n               { @str << '\n'; [:in_string] }
-  :STRING               \r               { @str << '\r'; [:in_string] }
-  :STRING               \\"              { @str << '\"'; [:in_string] }
-  :STRING               \\                { @str << '\\'; [:in_string] }
+  :STRING               \t               { @str << "\t"; [:in_string] }
+  :STRING               \n               { @str << "\n"; [:in_string] }
+  :STRING               \r               { @str << "\n"; [:in_string] }
+  :STRING               \\"              { @str << '"'; [:in_string] }
+  :STRING               \\                { @str << "\\"; [:in_string] }
+  :STRING               {QUOTE}           { state = nil; [:string,@str] }
   # error fallback 
                         .|\n              { raise "Illegal character <#{text}>" }
 inner

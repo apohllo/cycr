@@ -75,27 +75,9 @@ module Cyc
       @conn = nil
     end
 
-    NART_QUERY =<<-END
-      (clet ((result ())
-        (call-value :call)) 
-        (pif (listp call-value)
-          (cdolist (el call-value) 
-            (pif (nart-p el) 
-              (cpush (nart-id el) result) 
-              (cpush el result))) 
-          (pif (nart-p call-value)
-              (cpush (nart-id call-value) result)
-              (cpush call-value result)))
-        result)
-    END
-
-
     # Sends message +msg+ directly to the Cyc server and receives 
     # the answer. 
     def talk(msg, options={})
-      #conn.puts(msg.respond_to?(:to_cyc) ? msg.to_cyc : msg)
-      msg = NART_QUERY.sub(/:call/,msg) if options[:nart]
-
       send_message(msg)
       receive_answer(options)
     end
@@ -125,12 +107,12 @@ module Cyc
         end
       end
       # XXX ignore some potential asynchronous answers
-      answer = answer.split("\n")[-1]
+      # XXX check if everything works ok
+      #answer = answer.split("\n")[-1]
       answer = answer.sub(/(\d\d\d) (.*)/,"\\2")
       if($1.to_i == 200)
         begin
           result = @parser.parse(answer,options[:stack])
-          result = options[:nart] ? substitute_narts(result) : result
         rescue Parser::ContinueParsing => ex
           result = ex.stack
           current_result = result
@@ -148,48 +130,20 @@ module Cyc
           puts $2.sub(/^"/,"").sub(/"$/,"") + "\n" +
             @last_message
         else
-          puts "unknown error!"
+          puts "Unknown error! #{answer}"
         end
         nil
       end
     end
 
 
-    def method_missing(name,*args)
-      #"_missing_method_#{name}"
-      method_name = name.to_s.gsub("_","-").sub(/-nart$/,"")
-      options = {}
-      def method_name.to_cyc(quote=false)
-        self
-      end
-      options[:nart] = true if name.to_s =~ /_nart$/
-        talk(([method_name] + args).to_cyc,options)
-    end
-
-    DENOTATION_QUERY =<<-END 
-      (nart-denotation-mapper ":word")
-    END
-
-    def denotation_mapper(name)
-      send_message(DENOTATION_QUERY.sub(/:word/,name))
-      receive_answer(:nart => true)
-    end
-
-
-    # Finds collection with given name. The name has to
-    # be the name of the exact name of the constant.
-    def find_collection(name)
-      term = self.find_constant(name)
-      Collection.new(term, self) unless term.nil?
+    def method_missing(name,*args,&block)
+      @builder.reset
+      @builder.send(name,*args,&block)
+      talk(@builder.to_cyc)
     end
 
 protected
-
-    def substitute_narts(terms)
-      unless terms.nil?
-        terms.collect{|t| t.is_a?(String) ? Cyc::Nart.new(t,self) : t}
-      end
-    end
 
     def relevant_mts(term)
       @mts_cache[term] ||= 
@@ -200,9 +154,6 @@ protected
          else
            []
          end)
-    end
-
-    def with_reconnect
     end
   end
 end

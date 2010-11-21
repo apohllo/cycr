@@ -76,7 +76,7 @@ class SExpressionLexer
         when (text = ss.scan(/:[^<>\r\n\"\(\):&\ ]+/))
            @rex_tokens.push action { [:symbol,text] }
 
-        when (text = ss.scan(/\#\$[a-zA-Z0-9-]+/))
+        when (text = ss.scan(/\#\$[a-zA-Z0-9:_-]+/))
            @rex_tokens.push action { [:cyc_symbol,text] }
 
         when (text = ss.scan(/[^\r\n\"\(\):&\ ]+/))
@@ -98,26 +98,26 @@ class SExpressionLexer
 
       when :STRING
         case
-        when (text = ss.scan(/\"/))
-           @rex_tokens.push action { state = nil; [:string,@str] }
-
         when (text = ss.scan(/[^\n\r\"\\]+/))
            @rex_tokens.push action { @str << text; [:in_string]}
 
         when (text = ss.scan(/\t/))
-           @rex_tokens.push action { @str << '\t'; [:in_string] }
+           @rex_tokens.push action { @str << "\t"; [:in_string] }
 
         when (text = ss.scan(/\n/))
-           @rex_tokens.push action { @str << '\n'; [:in_string] }
+           @rex_tokens.push action { @str << "\n"; [:in_string] }
 
         when (text = ss.scan(/\r/))
-           @rex_tokens.push action { @str << '\r'; [:in_string] }
+           @rex_tokens.push action { @str << "\n"; [:in_string] }
 
         when (text = ss.scan(/\\"/))
-           @rex_tokens.push action { @str << '\"'; [:in_string] }
+           @rex_tokens.push action { @str << '"'; [:in_string] }
 
         when (text = ss.scan(/\\/))
-           @rex_tokens.push action { @str << '\\'; [:in_string] }
+           @rex_tokens.push action { @str << "\\"; [:in_string] }
+
+        when (text = ss.scan(/\"/))
+           @rex_tokens.push action { state = nil; [:string,@str] }
 
         else
           text = ss.string[ss.pos .. -1]

@@ -18,13 +18,6 @@ describe Cyc::Client do
     @client.constant_count.should_not == nil
   end
 
-  it "should allow to find 'Cat' collection" do
-    cat = @client.find_collection("Cat")
-    cat.should_not == nil
-    cat.should be_instance_of(Cyc::Collection)
-    cat.symbol.should == :Cat
-  end
-
   it "should allow multiple processes to use the client" do 
     parent_pid = Process.pid
     if fork
