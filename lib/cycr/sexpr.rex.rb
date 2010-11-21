@@ -73,7 +73,7 @@ class SExpressionLexer
         when (text = ss.scan(/NIL/))
            @rex_tokens.push action { [:nil,text] }
 
-        when (text = ss.scan(/:[^<>\r\n\"\(\):&\ ]+/))
+        when (text = ss.scan(/:[^<>\r\n\"\(\):&\#\ ]+/))
            @rex_tokens.push action { [:symbol,text] }
 
         when (text = ss.scan(/\#\$[a-zA-Z0-9:_-]+/))
@@ -84,6 +84,9 @@ class SExpressionLexer
 
         when (text = ss.scan(/\"/))
            @rex_tokens.push action { state = :STRING; @str = ""; [:in_string] }
+
+        when (text = ss.scan(/:/))
+           @rex_tokens.push action { [:assertion_sep]}
 
         when (text = ss.scan(/[\ \t\f\r\n]/))
           ;

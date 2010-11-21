@@ -49,6 +49,8 @@ module Cyc
           top = stack.pop
           stack[-1].push top
           raise ContinueParsing.new(stack[0][0])
+        when :assertion_sep
+          # ignore
         end
       end
       stack[0][0]

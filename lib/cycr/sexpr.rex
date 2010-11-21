@@ -7,7 +7,7 @@ macro
   LINE_TERMINATOR       \r|\n|\r\n
   INPUT_CHARACTER       [^\r\n\"\(\):& ]
   WHITE_SPACE           [\ \t\f\r\n] | \r\n
-  SYMBOL                :[^<>\r\n\"\(\):&\ ]+
+  SYMBOL                :[^<>\r\n\"\(\):&\#\ ]+
   CYC_SYMBOL            \#\$[a-zA-Z0-9:_-]+
   ATOM                  [^\r\n\"\(\):&\ ]+
   OPEN_PAR              \(
@@ -17,6 +17,7 @@ macro
   OPEN_LIST_QUOTE       \#<
   CLOSE_LIST_QUOTE      >
   DOT                   \.
+  ASSERTION_SEP         :
 
 
 rule
@@ -35,6 +36,7 @@ rule
                         {ATOM}			      { [:atom,text] }
                         # literals 
                         {QUOTE}           { state = :STRING; @str = ""; [:in_string] }
+                        {ASSERTION_SEP}  { [:assertion_sep]}
                         # whitespace 
                         {WHITE_SPACE}     # ignore 
   :STRING               [^\n\r\"\\]+      { @str << text; [:in_string]}
