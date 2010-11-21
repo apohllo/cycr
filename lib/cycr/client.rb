@@ -18,6 +18,7 @@ module Cyc
       @pid = Process.pid
       @parser = Parser.new
       @mts_cache = {}
+      @builder = Builder.new
 
       # read domains mapings
 #      talk(File.read(File.join(
