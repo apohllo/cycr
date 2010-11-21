@@ -12,7 +12,7 @@ end
 
 class Array
   def to_cyc
-    "'("+map{|e| e.to_cyc}.join(" ")+")"
+    "(el-find-if-nart '("+map{|e| e.to_cyc}.join(" ")+"))"
   end
 end
 
