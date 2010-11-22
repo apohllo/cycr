@@ -23,9 +23,9 @@ module Cyc
 
     def method_missing(name,*args,&block)
       @query << "(" << name.to_s.gsub("_","-") << " "
-      @query << args.map{|a| a.to_cyc}.join(" ")
+      @query << (args||[]).map{|a| a.to_cyc}.join(" ")
       if block
-        self.instance_exec(&block)
+        block.call(self)
       end
       @query << ")"
     end

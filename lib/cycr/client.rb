@@ -121,7 +121,7 @@ module Cyc
           while current_result.size == 100 do
             send_message("(subseq #{last_message} #{result.size} " +
                          "#{result.size + 100})")
-            current_result = receive_answer(options)
+            current_result = receive_answer(options) || []
             result.concat(current_result)
           end
           result
