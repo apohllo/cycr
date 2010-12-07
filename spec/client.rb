@@ -1,4 +1,5 @@
-require 'lib/cycr'
+$:.unshift "lib"
+require 'cycr'
 
 describe Cyc::Client do
   before(:each) do  
