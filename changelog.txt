@@ -1,5 +1,17 @@
+0.0.6
+- write README with usage example
+- fix NARTs containing NARTs
+- fix spec for Ruby 1.9.2
+0.0.5
+- fix parsing of assertions with NART MT
+- fix other NART issues
+0.0.4
+- remove special NART treatment
+- allow for nested SubL calls
 0.0.3
 - support for assertions
+- fix library initialization
+- typo in specs
 0.0.2
 - NARTs accessible via their names
 - parser extracted into separate file
