@@ -1,7 +1,7 @@
 Gem::Specification.new do |s|
   s.name = "cycr"
-  s.version = "0.0.5"
-  s.date = "2010-11-23"
+  s.version = "0.0.6"
+  s.date = "2010-12-07"
   s.summary = "Ruby client for the (Open)Cyc server"
   s.email = "apohllo@o2.pl"
   s.homepage = "http://github.com/apohllo/cycr"
