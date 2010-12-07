@@ -12,11 +12,11 @@ end
 
 class Array
   def to_cyc(raw=false)
-    contents = "'("+map{|e| e.to_cyc(raw)}.join(" ")+")"
+    contents = "("+map{|e| e.to_cyc(true)}.join(" ")+")"
     if raw
       contents
     else
-      "(el-find-if-nart #{contents})"
+      "(el-find-if-nart '#{contents})"
     end
   end
 end
