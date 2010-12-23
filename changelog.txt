@@ -1,3 +1,5 @@
+0.0.7
+- remove predefined SubL routines
 0.0.6
 - write README with usage example
 - fix NARTs containing NARTs
