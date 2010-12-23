@@ -22,9 +22,9 @@ describe Cyc::Client do
   it "should allow multiple processes to use the client" do 
     parent_pid = Process.pid
     if fork
-      @client.find_collection("Cat")
+      @client.find_constant("Cat")
     else
-      @client.find_collection("Dog")
+      @client.find_constant("Dog")
     end
     if Process.pid == parent_pid
       Process.waitall
