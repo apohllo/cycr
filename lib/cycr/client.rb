@@ -4,13 +4,13 @@ module Cyc
   # Author:: Aleksander Pohl (mailto:apohllo@o2.pl)
   # License:: MIT License
   #
-  # This class is the implementation of the Cyc server client. 
+  # This class is the implementation of the Cyc server client.
   class Client
     # If set to true, all communication with the server is logged
     # to standard output
     attr_accessor :debug
     attr_reader :host, :port
-    # Creates new Client. 
+    # Creates new Client.
     def initialize(host="localhost",port="3601",debug=false)
       @debug = debug
       @host = host
@@ -30,7 +30,7 @@ module Cyc
 
     # Returns the connection object. Ensures that the pid of current
     # process is the same as the pid, the connection was initialized with.
-    # 
+    #
     # If the block is given, the command is guarded by assertion, that
     # it will be performed, even if the connection was reset.
     def connection
@@ -46,7 +46,7 @@ module Cyc
           yield @conn
         end
       else
-        @conn 
+        @conn
       end
     end
 

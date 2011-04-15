@@ -2,16 +2,16 @@ $:.unshift "lib"
 require 'cycr'
 
 describe Cyc::Client do
-  before(:each) do  
+  before(:each) do
     @client = Cyc::Client.new()
 #    @client.debug = true
   end
 
-  after(:each) do 
+  after(:each) do
     @client.close
   end
 
-  it "should allow to talk to the server" do 
+  it "should allow to talk to the server" do
     @client.talk("(constant-count)").should_not == nil
   end
 
