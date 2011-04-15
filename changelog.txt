@@ -1,3 +1,7 @@
+0.0.8
+- fix documentation for Cyc::Builder
+- removal of legacy code
+- raw answers from server
 0.0.7
 - remove predefined SubL routines
 0.0.6
