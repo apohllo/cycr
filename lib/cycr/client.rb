@@ -129,18 +129,5 @@ module Cyc
       @builder.send(name,*args,&block)
       talk(@builder.to_cyc)
     end
-
-protected
-
-    def relevant_mts(term)
-      @mts_cache[term] ||= 
-        (mts = self.term_mts(term)
-         if mts
-           mts.select{|mt| mt.is_a? Symbol}.
-             reject{|mt| IRRELEVANT_MTS.include?(mt)} 
-         else
-           []
-         end)
-    end
   end
 end

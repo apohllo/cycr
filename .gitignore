@@ -1,2 +1,4 @@
 *.gem
 .*.sw?
+work
+doc
