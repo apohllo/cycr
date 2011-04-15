@@ -25,6 +25,10 @@ describe Cyc::Client do
     result.should be_a_kind_of String
   end
 
+  it "should raise an error for raw talk if Cyc reported error" do
+    lambda {@client.raw_talk(")")}.should raise_error(Cyc::Client::CycError)
+  end
+
   it "should allow to talk to server and return parsed answer" do
     result = @client.talk("(genls \#\$Dog)")
     result.should_not == nil

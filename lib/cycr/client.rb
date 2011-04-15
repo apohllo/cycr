@@ -10,6 +10,11 @@ module Cyc
     # to standard output
     attr_accessor :debug
     attr_reader :host, :port
+
+    # Error raised if the Cyc server reports an error
+    class CycError < RuntimeError
+    end
+
     # Creates new Client.
     def initialize(host="localhost",port="3601",debug=false)
       @debug = debug
@@ -97,6 +102,9 @@ module Cyc
             current_result = receive_answer(options) || []
             result.concat(current_result)
           end
+        rescue CycError => ex
+          puts ex.to_s
+          return nil
         end
         return result
       end
@@ -133,10 +141,9 @@ module Cyc
         end
       else
         unless $2.nil?
-          puts $2.sub(/^"/,"").sub(/"$/,"") + "\n" +
-            @last_message
+          raise CycError.new($2.sub(/^"/,"").sub(/"$/,"") + "\n" + @last_message)
         else
-          puts "Unknown error! #{answer}"
+          raise CycError.new("Unknown error! #{answer}")
         end
         nil
       end
