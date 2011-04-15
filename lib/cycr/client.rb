@@ -62,11 +62,18 @@ module Cyc
       @conn = nil
     end
 
-    # Sends message +msg+ directly to the Cyc server and receives 
-    # the answer. 
+    # Sends message +msg+ directly to the Cyc server and
+    # returns the parsed answer.
     def talk(msg, options={})
       send_message(msg)
       receive_answer(options)
+    end
+
+    # Sends message +msg+ directly to the Cyc server and
+    # returns the raw answer (i.e. not parsed).
+    def raw_talk(msg, options={})
+      send_message(msg)
+      receive_raw_answer(options)
     end
 
     # Send the raw message.
@@ -76,13 +83,34 @@ module Cyc
       connection{|c| c.puts(msg)}
     end
 
-    # Receive answer from server.
     def receive_answer(options={})
+      receive_raw_answer do |answer|
+        begin
+          result = @parser.parse(answer,options[:stack])
+        rescue Parser::ContinueParsing => ex
+          result = ex.stack
+          current_result = result
+          last_message = @last_message
+          while current_result.size == 100 do
+            send_message("(subseq #{last_message} #{result.size} " +
+                         "#{result.size + 100})")
+            current_result = receive_answer(options) || []
+            result.concat(current_result)
+          end
+        end
+        return result
+      end
+    end
+
+    # Receive raw answer from server. If a +block+ is given
+    # the answer is yield to the block, otherwise the naswer is returned.
+    def receive_raw_answer(options={})
       answer = connection{|c| c.waitfor(/./)}
       puts "Recv: #{answer}" if @debug
       if answer.nil?
         raise "Unknwon error occured. " +
-          "Check the submitted query in detail!"
+          "Check the submitted query in detail:\n" +
+          @last_message
       end
       while not answer =~ /\n/ do
         next_answer = connection{|c| c.waitfor(/./)}
@@ -98,19 +126,10 @@ module Cyc
       #answer = answer.split("\n")[-1]
       answer = answer.sub(/(\d\d\d) (.*)/,"\\2")
       if($1.to_i == 200)
-        begin
-          result = @parser.parse(answer,options[:stack])
-        rescue Parser::ContinueParsing => ex
-          result = ex.stack
-          current_result = result
-          last_message = @last_message
-          while current_result.size == 100 do
-            send_message("(subseq #{last_message} #{result.size} " +
-                         "#{result.size + 100})")
-            current_result = receive_answer(options) || []
-            result.concat(current_result)
-          end
-          result
+        if block_given?
+          yield answer
+        else
+          return answer
         end
       else
         unless $2.nil?
