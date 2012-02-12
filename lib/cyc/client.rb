@@ -1,28 +1,9 @@
 require 'net/telnet'
+require 'cyc/exception'
 
 module Cyc
-  # Error raised if the Cyc server reports an error.
-  class CycError < RuntimeError
-  end
-
-  # Error raised if the message sent to the server has
-  # more opening parentheses than closing parentheses.
-  class UnbalancedOpeningParenthesis < RuntimeError
-    # The number of unbalanced opening parentheses.
-    attr_reader :count
-    def initialize(count)
-      super("There are #{count} unbalanced opening parentheses")
-      @count = count
-    end
-  end
-
-  # Error raised if the message sent to the server has
-  # more closing parentheses than opening parentheses.
-  class UnbalancedClosingParenthesis < RuntimeError
-  end
-
   # Author:: Aleksander Pohl (mailto:apohllo@o2.pl)
-  # License:: MIT License
+  # License:: MIT/X11 License
   #
   # This class is the implementation of the Cyc server client.
   class Client
@@ -72,6 +53,7 @@ module Cyc
 
     protected :connection, :reconnect
 
+    # Clears the microtheory cache.
     def clear_cache
       @mts_cache = {}
     end
@@ -82,14 +64,13 @@ module Cyc
       @conn = nil
     end
 
-    # Sends message +msg+ directly to the Cyc server and
-    # returns the parsed answer.
+    # Sends message +msg+ to the Cyc server and returns a parsed answer.
     def talk(msg, options={})
       send_message(msg)
       receive_answer(options)
     end
 
-    # Sends message +msg+ directly to the Cyc server and
+    # Sends message +msg+ to the Cyc server and
     # returns the raw answer (i.e. not parsed).
     def raw_talk(msg, options={})
       send_message(msg)
@@ -118,7 +99,9 @@ module Cyc
       raise UnbalancedOpeningParenthesis.new(count) if count > 0
     end
 
-    # Send a raw message.
+    # Sends a raw message to the Cyc server. The user is
+    # responsible for receiving the answer by calling
+    # +receive_answer+ or +receive_raw_answer+.
     def send_message(message)
       position = 0
       check_parenthesis(message)
@@ -127,12 +110,12 @@ module Cyc
       connection{|c| c.puts(message)}
     end
 
-    # Receeive and parse an answer for a message.
+    # Receives and parses an answer for a message from the Cyc server.
     def receive_answer(options={})
       receive_raw_answer do |answer|
         begin
           result = @parser.parse(answer,options[:stack])
-        rescue Parser::ContinueParsing => ex
+        rescue ContinueParsing => ex
           result = ex.stack
           current_result = result
           last_message = @last_message
@@ -150,8 +133,8 @@ module Cyc
       end
     end
 
-    # Receive raw answer from server. If a +block+ is given
-    # the answer is yield to the block, otherwise the naswer is returned.
+    # Receives raw answer from server. If a +block+ is given
+    # the answer is yield to the block, otherwise the answer is returned.
     def receive_raw_answer(options={})
       answer = connection{|c| c.waitfor(/./)}
       puts "Recv: #{answer}" if @debug
@@ -189,7 +172,37 @@ module Cyc
       end
     end
 
-
+    # This hook allows for direct call on the Client class, that
+    # are translated into corresponding calls for Cyc server.
+    #
+    # E.g. if users initializes the client and calls some Ruby method
+    #   cyc = Cyc::Client.new
+    #   cyc.genls? :Dog, :Animal
+    #
+    # He/She returns a parsed answer from the server:
+    #   => "T"
+    #
+    # Since dashes are not allowed in Ruby method names they are replaced
+    # with underscores:
+    #
+    #   cyc.min_genls :Dog
+    #
+    # is translated into:
+    #
+    #   (min-genls #$Dog)
+    #
+    # As you see the Ruby symbols are translated into Cyc terms (not Cyc symbols!).
+    #
+    # It is also possible to nest the calls to build more complex functions:
+    #
+    #   cyc.with_any_mt do |cyc|
+    #     cyc.min_genls :Dog
+    #   end
+    #
+    # is translated into:
+    #
+    #   (with-any-mt (min-genls #$Dog))
+    #
     def method_missing(name,*args,&block)
       @builder.reset
       @builder.send(name,*args,&block)

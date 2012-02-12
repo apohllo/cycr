@@ -26,13 +26,18 @@ describe Cyc::Client do
   end
 
   it "should raise an error for raw talk if Cyc reported error" do
-    lambda {@client.raw_talk(")")}.should raise_error(Cyc::Client::CycError)
+    lambda {@client.raw_talk("(aaa)")}.should raise_error(Cyc::CycError)
   end
 
   it "should allow to talk to server and return parsed answer" do
     result = @client.talk("(genls \#\$Dog)")
     result.should_not == nil
     result.should respond_to :size
+  end
+
+  it "should not allow to send a message with unbalanced parenthesis" do
+    lambda {@client.talk("(")}.should raise_error(Cyc::UnbalancedOpeningParenthesis)
+    lambda {@client.talk("())")}.should raise_error(Cyc::UnbalancedClosingParenthesis)
   end
 
   it "should allow multiple processes to use the client" do
