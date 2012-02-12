@@ -1,20 +1,15 @@
 module Cyc
+  # Author:: Aleksander Pohl (mailto:apohllo@o2.pl)
+  # License:: MIT/X11 License
+  #
+  # The class used to parse the answer of the Cyc server.
   class Parser
-    # Exception raised when there is a continuation sign,
-    # at the end of the parsed message.
-    class ContinueParsing < RuntimeError
-      attr_reader :stack
-
-      def initialize(stack)
-        @stack = stack
-      end
-    end
-
     def initialize
       @lexer = SExpressionLexer.new
     end
 
-    # Parses message received from server. +Message+ to parse.
+    # Parses message received from server. Accepts
+    # +message+ to parse and a +stack+ with a partial parse result.
     def parse(message,stack=nil)
       @lexer.scan_str(message)
       stack ||= [[]]
@@ -30,9 +25,11 @@ module Cyc
           # FIXME find way to differentiate strings and atoms
           stack[-1] << token[1]
         when :cyc_symbol
+          stack[-1] << ::Cyc::Symbol.new(token[1][1..-1])
+        when :variable
+          stack[-1] << ::Cyc::Variable.new(token[1][1..-1])
+        when :term
           stack[-1] << token[1][2..-1].to_sym
-        when :symbol
-          stack[-1] << token[1][3..-1].to_sym
         when :string
           stack[-1] << token[1]
         when :open_as
@@ -57,9 +54,7 @@ module Cyc
     rescue ContinueParsing => ex
       raise
     rescue Exception => ex
-      puts "Error occured while parsing message:\n#{message}"
-      puts ex
-      nil
+      raise ParserError.new("Exception #{ex} occurred when parsing message '#{message}'.")
     end
   end
 end

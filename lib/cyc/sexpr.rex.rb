@@ -73,11 +73,14 @@ class SExpressionLexer
         when (text = ss.scan(/NIL/))
            @rex_tokens.push action { [:nil,text] }
 
-        when (text = ss.scan(/:[^<>\r\n\"\(\):&\#\ ]+/))
-           @rex_tokens.push action { [:symbol,text] }
+        when (text = ss.scan(/:[^<>\r\n\"\(\):&\?\#\ ]+/))
+           @rex_tokens.push action { [:cyc_symbol,text] }
+
+        when (text = ss.scan(/\?[^<>\r\n\"\(\):&\?\#\ ]+/))
+           @rex_tokens.push action { [:variable,text] }
 
         when (text = ss.scan(/\#\$[a-zA-Z0-9:_-]+/))
-           @rex_tokens.push action { [:cyc_symbol,text] }
+           @rex_tokens.push action { [:term,text] }
 
         when (text = ss.scan(/[^\r\n\"\(\):&\ ]+/))
            @rex_tokens.push action { [:atom,text] }

@@ -7,8 +7,9 @@ macro
   LINE_TERMINATOR       \r|\n|\r\n
   INPUT_CHARACTER       [^\r\n\"\(\):& ]
   WHITE_SPACE           [\ \t\f\r\n] | \r\n
-  SYMBOL                :[^<>\r\n\"\(\):&\#\ ]+
-  CYC_SYMBOL            \#\$[a-zA-Z0-9:_-]+
+  CYC_SYMBOL            :[^<>\r\n\"\(\):&\?\#\ ]+
+  VARIABLE              \?[^<>\r\n\"\(\):&\?\#\ ]+
+  TERM                  \#\$[a-zA-Z0-9:_-]+
   ATOM                  [^\r\n\"\(\):&\ ]+
   OPEN_PAR              \(
   CLOSE_PAR             \)
@@ -27,13 +28,14 @@ rule
                         {CLOSE_LIST_QUOTE}  { [:close_quote,text] }
                         {DOT}{DOT}{DOT}     { [:continuation] }
                         # keywords 
-                        {OPEN_PAR}			  { [:open_par,text] }
-                        {CLOSE_PAR}			  { [:close_par,text] }
-                        NIL               { [:nil,text] }
+                        {OPEN_PAR}	    { [:open_par,text] }
+                        {CLOSE_PAR}	    { [:close_par,text] }
+                        NIL                 { [:nil,text] }
                         # identifiers 
-                        {SYMBOL}			    { [:symbol,text] }
-                        {CYC_SYMBOL}			{ [:cyc_symbol,text] }
-                        {ATOM}			      { [:atom,text] }
+                        {CYC_SYMBOL}	    { [:cyc_symbol,text] }
+                        {VARIABLE}	    { [:variable,text] }
+                        {TERM}		    { [:term,text] }
+                        {ATOM}		    { [:atom,text] }
                         # literals 
                         {QUOTE}           { state = :STRING; @str = ""; [:in_string] }
                         {ASSERTION_SEP}  { [:assertion_sep]}

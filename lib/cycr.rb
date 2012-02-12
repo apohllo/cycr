@@ -1,1 +1,10 @@
-Dir.glob(File.join(File.dirname(__FILE__), 'cycr/**.rb')).each { |f| require f }
+require 'cyc/exception'
+require 'cyc/assertion'
+require 'cyc/builder'
+require 'cyc/client'
+require 'cyc/collection'
+require 'cyc/extensions'
+require 'cyc/parser'
+require 'cyc/sexpr.rex'
+require 'cyc/symbol'
+require 'cyc/variable'
