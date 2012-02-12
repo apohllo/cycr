@@ -1,4 +1,8 @@
 module Cyc
+  # Author:: Aleksander Pohl (mailto:apohllo@o2.pl)
+  # License:: MIT/X11 License
+  #
+  # This class is used to represent Cyc collections.
   class Collection
     attr_reader :symbol
 

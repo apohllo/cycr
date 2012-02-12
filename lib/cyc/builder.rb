@@ -1,7 +1,4 @@
 module Cyc
-  # Author:: Aleksander Pohl (mailto:apohllo@o2.pl)
-  # License:: MIT License
-  #
   # This class is used to capture calls to the Cyc client, to allow
   # nested calls, like
   #
