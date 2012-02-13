@@ -12,8 +12,13 @@ module Cyc
       @name = name
     end
 
-    # Representation of the variable with question mark as prefix.
+    # String representation of the variable.
     def to_s
+      self.to_cyc
+    end
+
+    # Representation of the variable understandable by Cyc.
+    def to_cyc(raw=false)
       "?#{@name}"
     end
 

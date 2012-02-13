@@ -21,6 +21,11 @@ module Cyc
       "#{@formula} : #{@microtheory}"
     end
 
+    # Returns the representation of the assertion understandable by Cyc.
+    def to_cyc(raw=false)
+      "(find-assertion (caar (el-to-hl '#{@formula.to_cyc(true)})) #{@microtheory.to_cyc})"
+    end
+
     def ==(other)
       return true if self.object_id == other.object_id
       return false unless other.respond_to?(:formula)
