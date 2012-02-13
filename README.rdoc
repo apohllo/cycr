@@ -62,7 +62,7 @@ The you can start 'irb' to see it in action:
   cyc = Cyc::Client.new
 
   # check if Dog generalizes to Animal
-  cyc.genls? :Dog, :Animal # => T
+  cyc.genls? :Dog, :Animal # => true
 
   # check if Animal generalizes to Dog
   cyc.genls? :Animal, :Dog # => nil
@@ -90,15 +90,41 @@ The you can start 'irb' to see it in action:
 
   # What is more, you might even build complex subcalls, such as:
   cyc.genls? :Person, :HomoSapiens # => nil
-  cyc.with_any_mt{|cyc| cyc.genls? :Person, :HomoSapiens} # => T
+  cyc.with_any_mt{|cyc| cyc.genls? :Person, :HomoSapiens} # => true
 
-  # If you want to see the query which is send to Cyc, just turn on the
+  # The assertions are parsed, as well as Cyc symbols and variables
+  keys = cyc.key_predicate_rule_index :isa
+  # => [:POS, :NEG]
+  keys[0].class
+  # => Cyc::Symbol
+  cyc.symbolp keys[0]
+  # => true
+
+  keys1 = cyc.key_predicate_rule_index :isa, keys[0]
+  # => [:ComputerRunningMt, :HumanManipulationMt, :BuyingMt, ...
+  keys2 = cyc.key_predicate_rule_index :isa, keys[0], keys1[2]
+  # => [:BACKWARD]
+  rules = cyc.gather_predicate_rule_index :isa, keys[0], keys1[2], keys2[0]
+  # => [[:implies, [:and, [:objectOfPossessionTransfer, :TheBuying, ?OBJ], 
+        [:activityObjectType, :TheSelectingAProduct, ?PREFERED]], 
+        [:isa, ?OBJ, ?PREFERED]] : BuyingMt]
+  cyc.assertion_p rules[0]
+  # => true
+
+  rules[0].formula[1][1][2]
+  # => ?OBJ
+  rules[0].formula[1][1][2].class
+  # => Cyc::Variable
+  # the variable cannot be checked for type, since it won't be bound
+
+
+  # If you want to see the query which is send to Cyc, just turn on
   # debugging:
   cyc.debug = true
   cyc.genls? :Dog, :Anial
   # Send: (genls? #$Dog #$Animal)
   # Recv: 200 T
-  # => "T" 
+  # => true 
 
   # The same way, you can turn it off:
   cyc.debug = false
@@ -108,9 +134,9 @@ The you can start 'irb' to see it in action:
 
 == LICENSE:
  
-(The MIT License)
+(The MIT/X11 License)
 
-Copyright (c) 2008-2010 Aleksander Pohl
+Copyright (c) 2008-2012 Aleksander Pohl
 
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the

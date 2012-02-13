@@ -1,3 +1,11 @@
+0.1.0
+- Add license info to some files
+- Add tests to Rakefile
+- More specs for the client
+- Parse variables and cyc symbols
+- Move files to cyc dir, improve parenthesis check
+- Better organization of tests (specs/integration separation)
+- T atom interpreted as true value
 0.0.9
 - raises error for raw answer if Cyc reports error
 0.0.8
