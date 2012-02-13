@@ -5,9 +5,9 @@ $gem_name = "cycr"
 desc "Run tests"
 task :test do
   puts "WARNING: The test have to be run with an available Cyc server"
-  sh "rspec spec/assertion.rb"
-  sh "rspec spec/client.rb"
   sh "rspec spec/parser.rb"
+  sh "rspec integration/assertion.rb"
+  sh "rspec integration/client.rb"
 end
 
 desc "Build the gem"
