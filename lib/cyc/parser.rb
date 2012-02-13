@@ -22,8 +22,12 @@ module Cyc
           top = stack.pop
           stack[-1].push top
         when :atom
-          # FIXME find way to differentiate strings and atoms
-          stack[-1] << token[1]
+          if token[1] == "T"
+            stack[-1] << true
+          else
+            # FIXME find way to differentiate strings and atoms
+            stack[-1] << token[1]
+          end
         when :cyc_symbol
           stack[-1] << ::Cyc::Symbol.new(token[1][1..-1])
         when :variable

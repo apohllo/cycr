@@ -37,4 +37,8 @@ describe Cyc::Parser do
   it "should parse a variable" do
     @parser.parse('?OBJ').should == Cyc::Variable.new("OBJ")
   end
+
+  it "should parse true value" do
+    @parser.parse('T').should == true
+  end
 end
