@@ -9,7 +9,7 @@ require "cyc/exception"
 #   b.next_result
 #   => [200, "Some response"]
 #   b.next_result
-#   => [200, "300 Some other response\nadditional data"]
+#   => [300, "Some other response\nadditional data"]
 #   b.next_result
 #   => nil
 #   b << "Invalid response\n"
