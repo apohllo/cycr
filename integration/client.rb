@@ -1,16 +1,8 @@
 $:.unshift "lib"
 require 'cycr'
+require 'cyc/connection/synchrony'
 
-describe Cyc::Client do
-  before(:each) do
-    @client = Cyc::Client.new()
-#    @client.debug = true
-  end
-
-  after(:each) do
-    @client.close
-  end
-
+shared_examples Cyc::Client do
   it "should allow to talk to the server" do
     @client.talk("(constant-count)").should_not == nil
   end
@@ -53,15 +45,105 @@ describe Cyc::Client do
     @client.talk('(gather-predicate-extent-index #$minimizeExtent)').size.should > 100
   end
 
+end
+
+describe Cyc::Client do
+  include_examples Cyc::Client
+  
+  it "should have socket driver" do
+    @client.driver.type.should == :socket
+  end
+
+  before(:all) do
+    Cyc::Connection.driver = Cyc::Connection::SocketDriver
+    @client = Cyc::Client.new()
+#    @client.debug = true
+  end
+
+  after(:each) do
+    @client.close
+  end
+
+end
+
+describe Cyc::Connection::SynchronyDriver do
+  include_examples Cyc::Client
+
+  it "should have synchrony driver" do
+    @client.driver.type.should == :synchrony
+  end
+
+  around(:each) do |blk|
+    EM.synchrony do
+      @client = Cyc::Client.new(:driver => Cyc::Connection::SynchronyDriver)
+#    @client.debug = true
+      blk.call
+      @client.close
+      EM.stop
+    end
+  end
+
+end
+
+describe "synchrony fiber concurrency" do
+  around(:each) do |blk|
+    EM.synchrony do
+      @client = Cyc::Client.new(:driver => Cyc::Connection::SynchronyDriver).connect
+#    @client.debug = true
+      blk.call
+      @client.close
+      EM.stop
+    end
+  end
+
+  # this is a little bit loooong test
+  # but tests aync nature of Fibers and composite results (subseq x)
+  it "should have consistent return values" do
+    @fiber = Fiber.current
+    togo = 0
+    size = (?A..?Z).to_a.each do |letter|
+      Fiber.new do
+        result_size = @client.fi_complete(letter).each do |value|
+          value.to_s[0].upcase.should == letter
+        end.length
+        result_size.should > 0
+        togo+= 1
+        EM.next_tick { @fiber.resume }
+      end.resume
+    end.size
+    while togo < size
+      @fiber = Fiber.current
+      Fiber.yield
+    end
+  end
+end
+
+describe "client multiple processes" do
+  
+  it "should have socket driver" do
+    @client.driver.type.should == :socket
+  end
+
   it "should allow multiple processes to use the client" do
     parent_pid = Process.pid
     if fork
-      @client.find_constant("Cat")
+      @client.find_constant("Cat").should == :Cat
     else
-      @client.find_constant("Dog")
+      @client.find_constant("Dog").should == :Dog
     end
     if Process.pid == parent_pid
       Process.waitall
     end
   end
+
+  before(:all) do
+    Cyc::Connection.driver = Cyc::Connection::SocketDriver
+    @client = Cyc::Client.new()
+#    @client.debug = true
+  end
+
+  after(:each) do
+    @client.close
+  end
+
 end
