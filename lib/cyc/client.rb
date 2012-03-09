@@ -1,4 +1,5 @@
-require 'net/telnet'
+require 'uri'
+require 'cyc/connection'
 require 'cyc/exception'
 
 module Cyc
@@ -10,35 +11,67 @@ module Cyc
     # If set to true, all communication with the server is logged
     # to standard output
     attr_accessor :debug
-    attr_reader :host, :port
+    attr_reader :host, :port, :driver
 
     # Creates new Client.
-    def initialize(host="localhost",port="3601",debug=false)
-      @debug = debug
-      @host = host
-      @port = port
+    def initialize(host="localhost", port=3601, options=false)
       @pid = Process.pid
       @parser = Parser.new
       @mts_cache = {}
       @builder = Builder.new
+      @conn_timeout = 0.2
+      @driver = Connection.driver
+      if Hash === host
+        options, host = host, nil
+      elsif Hash === port
+        options, port = port, nil
+      end
+      if Hash === options
+        if url = options[:url]
+          url = URI.parse(url)
+          host = url.host || host
+          port = url.port || port
+        end
+        @conn_timeout = options[:conn_timeout].to_f if options.key? :conn_timeout
+        @driver = options[:driver] if options.key? :driver
+        @debug = !!options[:debug]
+      else
+        @debug = !!options
+      end
+      @host = host || "localhost"
+      @port = (port || 3601).to_i
+    end
+
+    def connected?
+      @conn && @conn.connected? && @pid == Process.pid
     end
 
     # (Re)connects to the cyc server.
     def reconnect
+      @conn.disconnect if connected?
       @pid = Process.pid
-      @conn = Net::Telnet.new("Port" => @port, "Telnetmode" => false,
-                              "Timeout" => 600, "Host" => @host)
+      conn = @driver.new
+      puts "connecting: #@host:#@port $$#@pid" if @debug
+      conn.connect(@host, @port, @conn_timeout)
+      # instance variable should be initialized only
+      # after successfull connection attempt
+      @conn = conn
+      self
     end
 
+    # connect method allow to force early connection
+    # normally the connection will be established on first use
+    # e.g. Cyc::Client.new().connect
+    # should not be called twice 
+    # (however no big harm is done except for garbage collections)
+    alias_method :connect, :reconnect
     # Returns the connection object. Ensures that the pid of current
     # process is the same as the pid, the connection was initialized with.
     #
     # If the block is given, the command is guarded by assertion, that
     # it will be performed, even if the connection was reset.
     def connection
-      if @conn.nil? or @pid != Process.pid
-        reconnect
-      end
+      reconnect unless connected?
       if block_given?
         begin
           yield @conn
@@ -60,7 +93,7 @@ module Cyc
 
     # Closes connection with the server
     def close
-      connection{|c| c.puts("(api-quit)")}
+      connection{|c| c.write("(api-quit)")}
       @conn = nil
     end
 
@@ -103,22 +136,18 @@ module Cyc
     # responsible for receiving the answer by calling
     # +receive_answer+ or +receive_raw_answer+.
     def send_message(message)
-      position = 0
       check_parenthesis(message)
-      @last_message = message
       puts "Send: #{message}" if @debug
-      connection{|c| c.puts(message)}
+      connection{|c| c.write(message)}
     end
 
     # Receives and parses an answer for a message from the Cyc server.
     def receive_answer(options={})
-      receive_raw_answer do |answer|
+      receive_raw_answer do |answer, last_message|
         begin
-          result = @parser.parse(answer,options[:stack])
+          result = @parser.parse answer, options[:stack]
         rescue ContinueParsing => ex
-          result = ex.stack
-          current_result = result
-          last_message = @last_message
+          current_result = result = ex.stack
           while current_result.size == 100 do
             send_message("(subseq #{last_message} #{result.size} " +
                          "#{result.size + 100})")
@@ -126,6 +155,8 @@ module Cyc
             result.concat(current_result)
           end
         rescue CycError => ex
+        # is this really necessary?
+        # shouldn't this be rescued in upper scope instead?
           puts ex.to_s
           return nil
         end
@@ -136,39 +167,16 @@ module Cyc
     # Receives raw answer from server. If a +block+ is given
     # the answer is yield to the block, otherwise the answer is returned.
     def receive_raw_answer(options={})
-      answer = connection{|c| c.waitfor(/./)}
-      puts "Recv: #{answer}" if @debug
-      if answer.nil?
-        raise CycError.new("Unknwon error occured. " +
-          "Check the submitted query in detail:\n" +
-          @last_message)
-      end
-      while not answer =~ /\n/ do
-        next_answer = connection{|c| c.waitfor(/./)}
-        puts "Recv: #{next_answer}" if @debug
-        if answer.nil?
-          answer = next_answer
-        else
-          answer += next_answer
-        end
-      end
-      # XXX ignore some potential asynchronous answers
-      # XXX check if everything works ok
-      #answer = answer.split("\n")[-1]
-      answer = answer.sub(/(\d\d\d) (.*)/,"\\2")
-      if($1.to_i == 200)
+      status, answer, last_message = connection{|c| c.read}
+      puts "Recv: #{last_message} -> #{status} #{answer}" if @debug
+      if status == 200
         if block_given?
-          yield answer
+          yield answer, last_message
         else
           return answer
         end
       else
-        unless $2.nil?
-          raise CycError.new($2.sub(/^"/,"").sub(/"$/,"") + "\n" + @last_message)
-        else
-          raise CycError.new("Unknown error! #{answer}")
-        end
-        nil
+        raise CycError.new(answer.sub(/^"/,"").sub(/"$/,"") + "\n" + last_message)
       end
     end
 
