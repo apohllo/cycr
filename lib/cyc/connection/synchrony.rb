@@ -2,7 +2,39 @@ require "em-synchrony"
 require "cyc/connection/driver"
 require "cyc/exception"
 require "cyc/connection/buffer"
-
+# EM-Synchrony Cyc::Client driver
+# Author:: Rafal Michalski (mailto:royaltm75@gmail.com)
+# Licence:: MIT/X11 License
+#
+# Requires: igrigorik/em-synchrony
+#
+# To use this driver simply require this file
+# e.g. require 'cyc/connection/synchrony' beside 'cycr'
+#
+# if required before 'cycr' then the SocketDriver will not be loaded
+#   (however you can still load it by hand: require 'cyc/connection/socket'
+#    but be carefull though it will override default Cyc::Connection.driver)
+#
+# if required after 'cycr' then the SocketDriver will be preserved but
+#   the default driver will be set to SynchronyDriver
+#
+# Async fiber example:
+#
+# require 'cyc/connection/synchrony'
+# require 'cycr'
+# EM.synchrony do
+#   cyc = Cyc::Client.new :url => 'cyc://localhost:3601', :debug => true
+#   cyc.connect
+#   puts cyc.driver, cyc.driver.type.inspect
+#   Fiber.new do
+#     puts "Ani", cyc.fi_complete("Ani").inspect
+#   end.resume
+#   puts "Mi", cyc.talk('(fi-complete "Mi")').inspect
+#   EM.stop
+# end
+#
+# `Mi` will arrive before `Ani`
+#
 module Cyc
   module Connection
     class ConnectionClient < EventMachine::Connection

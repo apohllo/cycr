@@ -2,7 +2,12 @@ require "socket"
 require "cyc/connection/driver"
 require "cyc/exception"
 require "cyc/connection/buffer"
-
+# TCPSocket Cyc::Client driver
+# Author:: Rafal Michalski (mailto:royaltm75@gmail.com)
+# Licence:: MIT/X11 License
+#
+# Default driver for Cyc::Client.
+#
 module Cyc
   module Connection
     class SocketDriver

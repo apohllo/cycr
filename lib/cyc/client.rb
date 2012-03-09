@@ -14,6 +14,11 @@ module Cyc
     attr_reader :host, :port, :driver
 
     # Creates new Client.
+    # Usage:
+    #   Cyc::Client.new
+    #   Cyc::Client.new 'cyc.example', 3661, true
+    #   Cyc::Client.new :debug => true, :url => 'cyc://localhost/3661',
+    #     :conn_timeout => 0.1, :driver => Cyc::Connection::SynchronyDriver
     def initialize(host="localhost", port=3601, options=false)
       @pid = Process.pid
       @parser = Parser.new
@@ -59,11 +64,12 @@ module Cyc
       self
     end
 
-    # connect method allow to force early connection
-    # normally the connection will be established on first use
-    # e.g. Cyc::Client.new().connect
-    # should not be called twice 
-    # (however no big harm is done except for garbage collections)
+    # Usually the connection will be established on first use
+    # however connect() allows to force early connection:
+    #   Cyc::Client.new().connect
+    # Usefull in fiber concurrent environment to setup connection early.
+    # Should not be called twice
+    # (however no big harm is done except for garbage collection)
     alias_method :connect, :reconnect
     # Returns the connection object. Ensures that the pid of current
     # process is the same as the pid, the connection was initialized with.
