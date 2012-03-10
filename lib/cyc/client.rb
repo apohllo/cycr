@@ -134,15 +134,13 @@ module Cyc
     # parenthesis.
     def check_parenthesis(message)
       count = 0
-      position = 0
-      message.scan(/./) do |char|
-        position += 1
-        next if char !~ /\(|\)/
+      message.scan(/[()]/) do |char|
         count += (char == "(" ?  1 : -1)
         if count < 0
+          position = $~.offset(0)[0]
           raise UnbalancedClosingParenthesis.
-            new((position > 1 ? message[0..position-2] : "") +
-              "<error>)</error>" + message[position..-1])
+            new((position > 1 ? message[0...position] : "") +
+              "<error>)</error>" + message[position+1..-1])
         end
       end
       raise UnbalancedOpeningParenthesis.new(count) if count > 0
