@@ -25,7 +25,6 @@ module Cyc
     #   Cyc::Client.new :thread_safe => true
     def initialize(host="localhost", port=3601, options=false)
       @pid = Process.pid
-      @mts_cache = {}
       @conn_timeout = 0.2
       @driver = Connection.driver
       if Hash === host
@@ -101,11 +100,6 @@ module Cyc
     end
 
     protected :connection, :reconnect
-
-    # Clears the microtheory cache.
-    def clear_cache
-      @mts_cache = {}
-    end
 
     # Closes connection with the server
     def close
