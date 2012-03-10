@@ -89,7 +89,7 @@ describe "synchrony fiber concurrency" do
   around(:each) do |blk|
     EM.synchrony do
       @client = Cyc::Client.new(:driver => Cyc::Connection::SynchronyDriver).connect
-#    @client.debug = true
+      #@client.debug = true
       blk.call
       @client.close
       EM.stop
@@ -98,13 +98,13 @@ describe "synchrony fiber concurrency" do
 
   # this is a little bit loooong test
   # but tests aync nature of Fibers and composite results (subseq x)
-  it "should have consistent return values" do
+  it "should have consistent results running long query in separate fibers" do
     @fiber = Fiber.current
     togo = 0
-    size = (?A..?Z).to_a.each do |letter|
+    size = ('A'..'Z').to_a.each do |char|
       Fiber.new do
-        result_size = @client.fi_complete(letter).each do |value|
-          value.to_s[0].upcase.should == letter
+        result_size = @client.fi_complete(char).each do |value|
+          value.to_s[0].upcase.should == char
         end.length
         result_size.should > 0
         togo+= 1
@@ -116,6 +116,44 @@ describe "synchrony fiber concurrency" do
       Fiber.yield
     end
   end
+end
+
+describe "client thread concurrency" do
+  
+  before(:all) do
+    Cyc::Connection.driver = Cyc::Connection::SocketDriver
+    @client = Cyc::Client.new :thread_safe => true
+    # @client.debug = true
+  end
+
+  it "should have socket driver" do
+    @client.driver.type.should == :socket
+  end
+
+  it "should have thread_safe? flag set" do
+    @client.thread_safe?.should == true
+  end
+
+  it "should have consistent results running long query in separate threads" do
+    results = {}
+    m = Mutex.new
+    ('A'..'Z').map do |char|
+      Thread.new do
+        Thread.pass
+        res = @client.fi_complete char
+        @client.close
+        m.synchronize { results[char] = res }
+      end
+    end.each {|t| t.join }
+    results.each_pair do |char, res|
+      res.should_not == nil
+      size = res.each do |value|
+        value.to_s[0].upcase.should == char
+      end.length
+      size.should > 0
+    end
+  end
+
 end
 
 describe "client multiple processes" do
