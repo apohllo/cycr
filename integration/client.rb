@@ -88,8 +88,9 @@ end
 describe "synchrony fiber concurrency" do
   around(:each) do |blk|
     EM.synchrony do
-      @client = Cyc::Client.new(:driver => Cyc::Connection::SynchronyDriver).connect
-      #@client.debug = true
+      @client = EM::Synchrony::ConnectionPool.new(size: 1) do
+        Cyc::Client.new(:driver => Cyc::Connection::SynchronyDriver, :debug => false)
+      end
       blk.call
       @client.close
       EM.stop

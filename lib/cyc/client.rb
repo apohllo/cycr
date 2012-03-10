@@ -62,14 +62,13 @@ module Cyc
 
     # (Re)connects to the cyc server.
     def reconnect
-      self.conn.disconnect if connected?
+      # reuse existing connection driver
+      # to prevent race condition between fibers
+      conn = (self.conn||= @driver.new)
+      conn.disconnect if connected?
       @pid = Process.pid
-      conn = @driver.new
       puts "connecting: #@host:#@port $$#@pid" if @debug
       conn.connect(@host, @port, @conn_timeout)
-      # instance variable should be initialized only
-      # after successfull connection attempt
-      self.conn = conn
       self
     end
 
@@ -77,8 +76,6 @@ module Cyc
     # however connect() allows to force early connection:
     #   Cyc::Client.new().connect
     # Usefull in fiber concurrent environment to setup connection early.
-    # Should not be called twice
-    # (however no big harm is done except for garbage collection)
     alias_method :connect, :reconnect
     # Returns the connection object. Ensures that the pid of current
     # process is the same as the pid, the connection was initialized with.

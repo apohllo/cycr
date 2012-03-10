@@ -30,7 +30,7 @@ module Cyc
       end
 
       def disconnect
-        @sock.close
+        @sock.close if @sock
       rescue
       ensure
         @sock = nil
@@ -62,10 +62,13 @@ module Cyc
           raise Errno::ECONNRESET unless data
 
           @buffer << data
+        rescue IOError, EOFError
+          raise Errno::ECONNRESET
         end until result = @buffer.next_result(@meta)
         result << @meta
-      rescue IOError, EOFError
-        raise Errno::ECONNRESET
+      rescue Errno::ECONNRESET
+        disconnect
+        raise
       end
 
     protected

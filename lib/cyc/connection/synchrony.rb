@@ -23,8 +23,9 @@ require "cyc/connection/buffer"
 # require 'cyc/connection/synchrony'
 # require 'cycr'
 # EM.synchrony do
-#   cyc = Cyc::Client.new :url => 'cyc://localhost:3601', :debug => true
-#   cyc.connect
+#   cyc = EM::Synchrony::ConnectionPool.new(size: 5) do
+#     Cyc::Client.new :url => 'cyc://localhost:3601', :debug => true
+#   end
 #   puts cyc.driver, cyc.driver.type.inspect
 #   Fiber.new do
 #     puts "Ani", cyc.fi_complete("Ani").inspect
@@ -35,6 +36,8 @@ require "cyc/connection/buffer"
 #
 # `Mi` will arrive before `Ani`
 #
+# Warning: always use EM::Synchrony::ConnectionPool to handle Fiber
+#          concurrency race conditions.
 module Cyc
   module Connection
     class ConnectionClient < EventMachine::Connection
