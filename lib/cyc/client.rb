@@ -11,7 +11,8 @@ module Cyc
     # If set to true, all communication with the server is logged
     # to standard output
     attr_accessor :debug
-    attr_reader :host, :port, :driver
+    attr_reader :host, :port, :driver, :thread_safe
+    alias_method :thread_safe?, :thread_safe
 
     # Creates new Client.
     # Usage:
@@ -19,11 +20,12 @@ module Cyc
     #   Cyc::Client.new 'cyc.example', 3661, true
     #   Cyc::Client.new :debug => true, :url => 'cyc://localhost/3661',
     #     :conn_timeout => 0.1, :driver => Cyc::Connection::SynchronyDriver
+    #
+    # Thread safe client:
+    #   Cyc::Client.new :thread_safe => true
     def initialize(host="localhost", port=3601, options=false)
       @pid = Process.pid
-      @parser = Parser.new
       @mts_cache = {}
-      @builder = Builder.new
       @conn_timeout = 0.2
       @driver = Connection.driver
       if Hash === host
@@ -40,27 +42,35 @@ module Cyc
         @conn_timeout = options[:conn_timeout].to_f if options.key? :conn_timeout
         @driver = options[:driver] if options.key? :driver
         @debug = !!options[:debug]
+        @thread_safe = !!options[:thread_safe]
       else
         @debug = !!options
+        @thread_safe = false
       end
       @host = host || "localhost"
       @port = (port || 3601).to_i
+
+      if @thread_safe
+        self.extend ThreadSafeClientExtension
+      else
+        @conn = nil
+      end
     end
 
     def connected?
-      @conn && @conn.connected? && @pid == Process.pid
+      (conn=self.conn) && conn.connected? && @pid == Process.pid
     end
 
     # (Re)connects to the cyc server.
     def reconnect
-      @conn.disconnect if connected?
+      self.conn.disconnect if connected?
       @pid = Process.pid
       conn = @driver.new
       puts "connecting: #@host:#@port $$#@pid" if @debug
       conn.connect(@host, @port, @conn_timeout)
       # instance variable should be initialized only
       # after successfull connection attempt
-      @conn = conn
+      self.conn = conn
       self
     end
 
@@ -80,13 +90,13 @@ module Cyc
       reconnect unless connected?
       if block_given?
         begin
-          yield @conn
+          yield conn
         rescue Errno::ECONNRESET
           reconnect
-          yield @conn
+          yield conn
         end
       else
-        @conn
+        conn
       end
     end
 
@@ -100,7 +110,7 @@ module Cyc
     # Closes connection with the server
     def close
       connection{|c| c.write("(api-quit)")}
-      @conn = nil
+      self.conn = nil
     end
 
     # Sends message +msg+ to the Cyc server and returns a parsed answer.
@@ -151,7 +161,7 @@ module Cyc
     def receive_answer(options={})
       receive_raw_answer do |answer, last_message|
         begin
-          result = @parser.parse answer, options[:stack]
+          result = Parser.new.parse answer, options[:stack]
         rescue ContinueParsing => ex
           current_result = result = ex.stack
           while current_result.size == 100 do
@@ -160,11 +170,11 @@ module Cyc
             current_result = receive_answer(options) || []
             result.concat(current_result)
           end
-        rescue CycError => ex
+        # rescue CycError => ex
         # is this really necessary?
         # shouldn't this be rescued in upper scope instead?
-          puts ex.to_s
-          return nil
+          # puts ex.to_s
+          # return nil
         end
         return result
       end
@@ -218,9 +228,24 @@ module Cyc
     #   (with-any-mt (min-genls #$Dog))
     #
     def method_missing(name,*args,&block)
-      @builder.reset
-      @builder.send(name,*args,&block)
-      talk(@builder.to_cyc)
+      builder = Builder.new
+      builder.send(name,*args,&block)
+      talk(builder.to_cyc)
     end
+    protected
+    attr_accessor :conn
+  end
+
+  module ThreadSafeClientExtension
+    THR_VAR_TEMLPATE='_cyc_client_$%s_%s'
+
+    def self.extend_object(obj)
+      obj.instance_variable_set "@thrconn", (THR_VAR_TEMLPATE%[obj.object_id, 'conn']).intern
+      super
+    end
+
+    protected
+    def conn; Thread.current[@thrconn]; end
+    def conn=(conn); Thread.current[@thrconn] = conn; end
   end
 end
