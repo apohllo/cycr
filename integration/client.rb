@@ -1,6 +1,6 @@
 $:.unshift "lib"
 require 'cycr'
-require 'cyc/connection/synchrony'
+require 'cyc/connection/synchrony' if defined? Fiber
 
 shared_examples Cyc::Client do
   it "should allow to talk to the server" do
@@ -66,55 +66,57 @@ describe Cyc::Client do
 
 end
 
-describe Cyc::Connection::SynchronyDriver do
-  include_examples Cyc::Client
+if defined? Cyc::Connection::SynchronyDriver
+  describe Cyc::Connection::SynchronyDriver do
+    include_examples Cyc::Client
 
-  it "should have synchrony driver" do
-    @client.driver.type.should == :synchrony
-  end
-
-  around(:each) do |blk|
-    EM.synchrony do
-      @client = Cyc::Client.new(:driver => Cyc::Connection::SynchronyDriver)
-#    @client.debug = true
-      blk.call
-      @client.close
-      EM.stop
+    it "should have synchrony driver" do
+      @client.driver.type.should == :synchrony
     end
-  end
 
-end
-
-describe "synchrony fiber concurrency" do
-  around(:each) do |blk|
-    EM.synchrony do
-      @client = EM::Synchrony::ConnectionPool.new(size: 1) do
-        Cyc::Client.new(:driver => Cyc::Connection::SynchronyDriver, :debug => false)
+    around(:each) do |blk|
+      EM.synchrony do
+        @client = Cyc::Client.new(:driver => Cyc::Connection::SynchronyDriver)
+  #    @client.debug = true
+        blk.call
+        @client.close
+        EM.stop
       end
-      blk.call
-      @client.close
-      EM.stop
     end
+
   end
 
-  # this is a little bit loooong test
-  # but tests aync nature of Fibers and composite results (subseq x)
-  it "should have consistent results running long query in separate fibers" do
-    @fiber = Fiber.current
-    togo = 0
-    size = ('A'..'Z').to_a.each do |char|
-      Fiber.new do
-        result_size = @client.fi_complete(char).each do |value|
-          value.to_s[0].upcase.should == char
-        end.length
-        result_size.should > 0
-        togo+= 1
-        EM.next_tick { @fiber.resume }
-      end.resume
-    end.size
-    while togo < size
+  describe "synchrony fiber concurrency" do
+    around(:each) do |blk|
+      EM.synchrony do
+        @client = EM::Synchrony::ConnectionPool.new(size: 1) do
+          Cyc::Client.new(:driver => Cyc::Connection::SynchronyDriver, :debug => false)
+        end
+        blk.call
+        @client.close
+        EM.stop
+      end
+    end
+
+    # this is a little bit loooong test
+    # but tests aync nature of Fibers and composite results (subseq x)
+    it "should have consistent results running long query in separate fibers" do
       @fiber = Fiber.current
-      Fiber.yield
+      togo = 0
+      size = ('A'..'Z').to_a.each do |char|
+        Fiber.new do
+          result_size = @client.fi_complete(char).each do |value|
+            value.to_s[0].upcase.should == char
+          end.length
+          result_size.should > 0
+          togo+= 1
+          EM.next_tick { @fiber.resume }
+        end.resume
+      end.size
+      while togo < size
+        @fiber = Fiber.current
+        Fiber.yield
+      end
     end
   end
 end
