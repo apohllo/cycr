@@ -164,15 +164,10 @@ describe "client multiple processes" do
   end
 
   it "should allow multiple processes to use the client" do
-    parent_pid = Process.pid
-    if fork
-      @client.find_constant("Cat").should == :Cat
-    else
-      @client.find_constant("Dog").should == :Dog
-    end
-    if Process.pid == parent_pid
-      Process.waitall
-    end
+    fork { @client.find_constant("Cat").should == :Cat }
+    fork { @client.find_constant("Dog").should == :Dog }
+    @client.find_constant("Animal").should == :Animal
+    Process.waitall
   end
 
   before(:all) do
