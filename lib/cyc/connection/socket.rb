@@ -25,7 +25,9 @@ module Cyc
       def connect(host, port, conn_timeout=0.2)
         with_timeout(conn_timeout.to_f) do
           @sock = TCPSocket.new(host, port)
-          @sock.setsockopt Socket::IPPROTO_TCP, Socket::TCP_NODELAY, 1
+          @sock.sync = true
+          @sock.binmode
+          #@sock.setsockopt Socket::IPPROTO_TCP, Socket::TCP_NODELAY, 1
         end
       end
 
@@ -53,22 +55,22 @@ module Cyc
       def write(rawmsg)
         @meta = rawmsg
         @sock.write(rawmsg + EOL)
+        # ensure that the connection is still with a server
+        # and wait for an answer at the same time
+        if @sock.eof?
+          disconnect
+          raise Errno::ECONNRESET
+        end
       end
 
       def read
         begin
-          data = @sock.readpartial(4096)
-
-          raise Errno::ECONNRESET unless data
-
-          @buffer << data
-        rescue IOError, EOFError
-          raise Errno::ECONNRESET
+          @buffer << @sock.readpartial(4096)
         end until result = @buffer.next_result(@meta)
         result << @meta
-      rescue Errno::ECONNRESET
+      rescue IOError, EOFError, Errno::ECONNRESET
         disconnect
-        raise
+        raise Errno::ECONNRESET
       end
 
     protected

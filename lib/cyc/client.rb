@@ -57,7 +57,7 @@ module Cyc
     end
 
     def connected?
-      (conn=self.conn) && conn.connected? && @pid == Process.pid
+      (conn=self.conn) && conn.connected? && @pid == Process.pid || false
     end
 
     # (Re)connects to the cyc server.
@@ -100,7 +100,9 @@ module Cyc
 
     # Closes connection with the server
     def close
-      connection{|c| c.write("(api-quit)")}
+      conn.write("(api-quit)") if connected?
+    rescue Errno::ECONNRESET
+    ensure
       self.conn = nil
     end
 
