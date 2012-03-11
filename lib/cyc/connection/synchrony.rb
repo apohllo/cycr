@@ -100,16 +100,11 @@ module Cyc
       def self.type; :synchrony; end
 
       def initialize
-        @timeout = 5.0
         @connection = nil
       end
 
       def connected?
         @connection && @connection.connected?
-      end
-
-      def timeout=(seconds)
-        @timeout = seconds.to_f
       end
 
       def connect(host, port, timeout)

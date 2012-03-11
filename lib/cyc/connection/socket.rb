@@ -39,19 +39,6 @@ module Cyc
         @buffer.discard!
       end
 
-      def timeout=(seconds)
-        usecs   = (seconds.to_f * 1_000_000 % 1_000_000).to_i
-        seconds = seconds.to_i
-
-        optval = [seconds, usecs].pack("l_2")
-
-        begin
-          @sock.setsockopt Socket::SOL_SOCKET, Socket::SO_RCVTIMEO, optval
-          @sock.setsockopt Socket::SOL_SOCKET, Socket::SO_SNDTIMEO, optval
-        rescue Errno::ENOPROTOOPT
-        end
-      end
-
       def write(rawmsg)
         @meta = rawmsg
         @sock.write(rawmsg + EOL)
