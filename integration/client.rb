@@ -74,11 +74,11 @@ if defined? Cyc::Connection::SynchronyDriver
       @client.driver.type.should == :synchrony
     end
 
-    around(:each) do |blk|
+    around(:each) do |test_case|
       EM.synchrony do
         @client = Cyc::Client.new(:driver => Cyc::Connection::SynchronyDriver)
   #    @client.debug = true
-        blk.call
+        test_case.call
         @client.close
         EM.stop
       end
@@ -87,12 +87,12 @@ if defined? Cyc::Connection::SynchronyDriver
   end
 
   describe "synchrony fiber concurrency" do
-    around(:each) do |blk|
+    around(:each) do |test_case|
       EM.synchrony do
         @client = EM::Synchrony::ConnectionPool.new(size: 1) do
           Cyc::Client.new(:driver => Cyc::Connection::SynchronyDriver, :debug => false)
         end
-        blk.call
+        test_case.call
         @client.close
         EM.stop
       end
