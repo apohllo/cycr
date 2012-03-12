@@ -16,10 +16,23 @@ module Cyc
 
     # Creates new Client.
     # Usage:
+    #   Cyc::Client.new [options = {}]
+    #
+    # options:
+    # - :host         = 'localhost' server address name
+    # - :port         = 3601        server port
+    # - :debug        = false       initial debug flag
+    # - :conn_timeout = 0.2         connection timeout in seconds
+    # - :url (String):              'cyc://host:port' overrides :host, :port
+    # - :driver (Class):            client connection driver class
+    # - :thread_safe (true/false):  true if you want to share client between
+    #                               threads
+    #
+    # Example:
     #   Cyc::Client.new
-    #   Cyc::Client.new 'cyc.example', 3661, true
+    #   Cyc::Client.new :host => 'cyc.example', :port => 3661, :debug => true
     #   Cyc::Client.new :debug => true, :url => 'cyc://localhost/3661',
-    #     :conn_timeout => 0.1, :driver => Cyc::Connection::SynchronyDriver
+    #     :conn_timeout => 1.5, :driver => Cyc::Connection::SynchronyDriver
     #
     # Thread safe client:
     #   Cyc::Client.new :thread_safe => true
@@ -33,6 +46,8 @@ module Cyc
         options, port = port, nil
       end
       if Hash === options
+        host = options[:host] if options.key? :host
+        port = options[:port] if options.key? :port
         if url = options[:url]
           url = URI.parse(url)
           host = url.host || host
