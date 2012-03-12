@@ -9,7 +9,7 @@
 = FEATURES/PROBLEMS
 
 * The text protocol is used to talk with Cyc
-* Ruby symbols are converted to Cyc symbols
+* Ruby symbols are converted to Cyc terms
 * Ruby arrays are converted to SubL arrays
 * Ruby calls on the client are transparently translated to SubL
 * Support for subcalls (like 'with-any-mt')
@@ -46,11 +46,10 @@ The gem is available at rubygems.org, so you can install it with:
 
 Prerequisites:
 
-* Cyc server is running 
-** you can download it from http://www.opencyc.org
+* Cyc server is running - you can download it from http://www.opencyc.org
 * Telnet connection is on
-** type (enable-tcp-server :cyc-api 3601) in the cyc console or Cyc Browser
-   -> Tools -> Interactor
+  type +(enable-tcp-server :cyc-api 3601)+ in the cyc console 
+  or Cyc Browser -> Tools -> Interactor
 
 The you can start 'irb' to see it in action:
 
