@@ -39,5 +39,10 @@ module Cyc
       @stack = stack
     end
   end
+  
+  # Exception raised by the parser if data received from server
+  # is not in expected format.
+  class ProtocolError < CycError
+  end
 
 end

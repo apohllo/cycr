@@ -1,4 +1,5 @@
-require 'net/telnet'
+require 'uri'
+require 'cyc/connection'
 require 'cyc/exception'
 
 module Cyc
@@ -10,58 +11,114 @@ module Cyc
     # If set to true, all communication with the server is logged
     # to standard output
     attr_accessor :debug
-    attr_reader :host, :port
+    attr_reader :host, :port, :driver, :thread_safe
+    alias_method :thread_safe?, :thread_safe
 
     # Creates new Client.
-    def initialize(host="localhost",port="3601",debug=false)
-      @debug = debug
-      @host = host
-      @port = port
+    # Usage:
+    #   Cyc::Client.new [options = {}]
+    #
+    # options:
+    # - :host         = 'localhost' server address name
+    # - :port         = 3601        server port
+    # - :debug        = false       initial debug flag
+    # - :conn_timeout = 0.2         connection timeout in seconds
+    # - :url (String):              'cyc://host:port' overrides :host, :port
+    # - :driver (Class):            client connection driver class
+    # - :thread_safe (true/false):  true if you want to share client between
+    #                               threads
+    #
+    # Example:
+    #   Cyc::Client.new
+    #   Cyc::Client.new :host => 'cyc.example', :port => 3661, :debug => true
+    #   Cyc::Client.new :debug => true, :url => 'cyc://localhost/3661',
+    #     :conn_timeout => 1.5, :driver => Cyc::Connection::SynchronyDriver
+    #
+    # Thread safe client:
+    #   Cyc::Client.new :thread_safe => true
+    def initialize(host="localhost", port=3601, options=false)
       @pid = Process.pid
-      @parser = Parser.new
-      @mts_cache = {}
-      @builder = Builder.new
+      @conn_timeout = 0.2
+      @driver = Connection.driver
+      if Hash === host
+        options, host = host, nil
+      elsif Hash === port
+        options, port = port, nil
+      end
+      if Hash === options
+        host = options[:host] if options.key? :host
+        port = options[:port] if options.key? :port
+        if url = options[:url]
+          url = URI.parse(url)
+          host = url.host || host
+          port = url.port || port
+        end
+        @conn_timeout = options[:conn_timeout].to_f if options.key? :conn_timeout
+        @driver = options[:driver] if options.key? :driver
+        @debug = !!options[:debug]
+        @thread_safe = !!options[:thread_safe]
+      else
+        @debug = !!options
+        @thread_safe = false
+      end
+      @host = host || "localhost"
+      @port = (port || 3601).to_i
+
+      if @thread_safe
+        self.extend ThreadSafeClientExtension
+      else
+        @conn = nil
+      end
+    end
+
+    def connected?
+      (conn=self.conn) && conn.connected? && @pid == Process.pid || false
     end
 
     # (Re)connects to the cyc server.
     def reconnect
+      # reuse existing connection driver
+      # to prevent race condition between fibers
+      conn = (self.conn||= @driver.new)
+      conn.disconnect if connected?
       @pid = Process.pid
-      @conn = Net::Telnet.new("Port" => @port, "Telnetmode" => false,
-                              "Timeout" => 600, "Host" => @host)
+      puts "connecting: #@host:#@port $$#@pid" if @debug
+      conn.connect(@host, @port, @conn_timeout)
+      self
     end
 
+    # Usually the connection will be established on first use
+    # however connect() allows to force early connection:
+    #   Cyc::Client.new().connect
+    # Usefull in fiber concurrent environment to setup connection early.
+    alias_method :connect, :reconnect
     # Returns the connection object. Ensures that the pid of current
     # process is the same as the pid, the connection was initialized with.
     #
     # If the block is given, the command is guarded by assertion, that
     # it will be performed, even if the connection was reset.
     def connection
-      if @conn.nil? or @pid != Process.pid
-        reconnect
-      end
+      reconnect unless connected?
       if block_given?
         begin
-          yield @conn
+          yield conn
         rescue Errno::ECONNRESET
           reconnect
-          yield @conn
+          yield conn
         end
       else
-        @conn
+        conn
       end
     end
 
     protected :connection, :reconnect
 
-    # Clears the microtheory cache.
-    def clear_cache
-      @mts_cache = {}
-    end
-
     # Closes connection with the server
     def close
-      connection{|c| c.puts("(api-quit)")}
-      @conn = nil
+      conn.write("(api-quit)") if connected?
+    rescue Errno::ECONNRESET
+    ensure
+      self.conn = nil
     end
 
     # Sends message +msg+ to the Cyc server and returns a parsed answer.
@@ -85,15 +142,13 @@ module Cyc
     # parenthesis.
     def check_parenthesis(message)
       count = 0
-      position = 0
-      message.scan(/./) do |char|
-        position += 1
-        next if char !~ /\(|\)/
+      message.scan(/[()]/) do |char|
         count += (char == "(" ?  1 : -1)
         if count < 0
+          position = $~.offset(0)[0]
           raise UnbalancedClosingParenthesis.
-            new((position > 1 ? message[0..position-2] : "") +
-              "<error>)</error>" + message[position..-1])
+            new((position > 1 ? message[0...position] : "") +
+              "<error>)</error>" + message[position+1..-1])
         end
       end
       raise UnbalancedOpeningParenthesis.new(count) if count > 0
@@ -103,31 +158,29 @@ module Cyc
     # responsible for receiving the answer by calling
     # +receive_answer+ or +receive_raw_answer+.
     def send_message(message)
-      position = 0
       check_parenthesis(message)
-      @last_message = message
       puts "Send: #{message}" if @debug
-      connection{|c| c.puts(message)}
+      connection{|c| c.write(message)}
     end
 
     # Receives and parses an answer for a message from the Cyc server.
     def receive_answer(options={})
-      receive_raw_answer do |answer|
+      receive_raw_answer do |answer, last_message|
         begin
-          result = @parser.parse(answer,options[:stack])
+          result = Parser.new.parse answer, options[:stack]
         rescue ContinueParsing => ex
-          result = ex.stack
-          current_result = result
-          last_message = @last_message
+          current_result = result = ex.stack
           while current_result.size == 100 do
             send_message("(subseq #{last_message} #{result.size} " +
                          "#{result.size + 100})")
             current_result = receive_answer(options) || []
             result.concat(current_result)
           end
-        rescue CycError => ex
-          puts ex.to_s
-          return nil
+        # rescue CycError => ex
+        # is this really necessary?
+        # shouldn't this be rescued in upper scope instead?
+          # puts ex.to_s
+          # return nil
         end
         return result
       end
@@ -136,39 +189,16 @@ module Cyc
     # Receives raw answer from server. If a +block+ is given
     # the answer is yield to the block, otherwise the answer is returned.
     def receive_raw_answer(options={})
-      answer = connection{|c| c.waitfor(/./)}
-      puts "Recv: #{answer}" if @debug
-      if answer.nil?
-        raise CycError.new("Unknwon error occured. " +
-          "Check the submitted query in detail:\n" +
-          @last_message)
-      end
-      while not answer =~ /\n/ do
-        next_answer = connection{|c| c.waitfor(/./)}
-        puts "Recv: #{next_answer}" if @debug
-        if answer.nil?
-          answer = next_answer
-        else
-          answer += next_answer
-        end
-      end
-      # XXX ignore some potential asynchronous answers
-      # XXX check if everything works ok
-      #answer = answer.split("\n")[-1]
-      answer = answer.sub(/(\d\d\d) (.*)/,"\\2")
-      if($1.to_i == 200)
+      status, answer, last_message = connection{|c| c.read}
+      puts "Recv: #{last_message} -> #{status} #{answer}" if @debug
+      if status == 200
         if block_given?
-          yield answer
+          yield answer, last_message
         else
           return answer
         end
       else
-        unless $2.nil?
-          raise CycError.new($2.sub(/^"/,"").sub(/"$/,"") + "\n" + @last_message)
-        else
-          raise CycError.new("Unknown error! #{answer}")
-        end
-        nil
+        raise CycError.new(answer.sub(/^"/,"").sub(/"$/,"") + "\n" + last_message)
       end
     end
 
@@ -204,9 +234,24 @@ module Cyc
     #   (with-any-mt (min-genls #$Dog))
     #
     def method_missing(name,*args,&block)
-      @builder.reset
-      @builder.send(name,*args,&block)
-      talk(@builder.to_cyc)
+      builder = Builder.new
+      builder.send(name,*args,&block)
+      talk(builder.to_cyc)
     end
+    protected
+    attr_accessor :conn
+  end
+
+  module ThreadSafeClientExtension
+    THR_VAR_TEMLPATE='_cyc_client_$%s_%s'
+
+    def self.extend_object(obj)
+      obj.instance_variable_set "@thrconn", (THR_VAR_TEMLPATE%[obj.object_id, 'conn']).intern
+      super
+    end
+
+    protected
+    def conn; Thread.current[@thrconn]; end
+    def conn=(conn); Thread.current[@thrconn] = conn; end
   end
 end
