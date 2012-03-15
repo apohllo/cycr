@@ -2,7 +2,7 @@ require 'uri'
 require 'cyc/connection'
 require 'cyc/exception'
 
-module Cyc
+module Cyc #:nodoc:
   # Author:: Aleksander Pohl (mailto:apohllo@o2.pl)
   # License:: MIT/X11 License
   #
@@ -11,22 +11,38 @@ module Cyc
     # If set to true, all communication with the server is logged
     # to standard output
     attr_accessor :debug
-    attr_reader :host, :port, :driver, :thread_safe
+
+    # The +host+ the client connects to.
+    attr_reader :host
+
+    # The +port+ the client connects to.
+    attr_reader :port
+
+    # The +driver+ the client uses to connect to the server.
+    attr_reader :driver
+
+    # +true+ if the client is thread safe.
+    attr_reader :thread_safe
     alias_method :thread_safe?, :thread_safe
+
+    # The +connection+ object - direct usage is discouraged.
+    # Use connection() call instead.
+    attr_accessor :conn
+    protected :conn
 
     # Creates new Client.
     # Usage:
     #   Cyc::Client.new [options = {}]
     #
     # options:
-    # - :host         = 'localhost' server address name
-    # - :port         = 3601        server port
-    # - :debug        = false       initial debug flag
-    # - :conn_timeout = 0.2         connection timeout in seconds
-    # - :url (String):              'cyc://host:port' overrides :host, :port
-    # - :driver (Class):            client connection driver class
-    # - :thread_safe (true/false):  true if you want to share client between
-    #                               threads
+    # - +:host+ = 'localhost'   server address
+    # - +:port+ = +3601+          server port
+    # - +:debug+ = +false+        initial debug flag
+    # - +:conn_timeout+ = +0.2+   connection timeout in seconds
+    # - +:url+ (String):          'cyc://host:port' overrides +:host+, +:port+
+    # - +:driver+ (Class) = Cyc::Connection::Socket  client connection driver class
+    # - +:thread_safe+ = +true+   set to +true+ if you want to share client between
+    #   threads
     #
     # Example:
     #   Cyc::Client.new
@@ -71,6 +87,7 @@ module Cyc
       end
     end
 
+    # Returns +true+ if the client is connected with the server.
     def connected?
       (conn=self.conn) && conn.connected? && @pid == Process.pid || false
     end
@@ -113,7 +130,7 @@ module Cyc
 
     protected :connection, :reconnect
 
-    # Closes connection with the server
+    # Closes connection with the server.
     def close
       conn.write("(api-quit)") if connected?
     rescue Errno::ECONNRESET
@@ -121,30 +138,31 @@ module Cyc
       self.conn = nil
     end
 
-    # Sends message +msg+ to the Cyc server and returns a parsed answer.
-    def talk(msg, options={})
-      send_message(msg)
+    # Sends the +messsage+ to the Cyc server and returns a parsed answer.
+    def talk(message, options={})
+      send_message(message)
       receive_answer(options)
     end
 
-    # Sends message +msg+ to the Cyc server and
+    # Sends the +message+ to the Cyc server and
     # returns the raw answer (i.e. not parsed).
-    def raw_talk(msg, options={})
-      send_message(msg)
+    def raw_talk(message, options={})
+      send_message(message)
       receive_raw_answer(options)
     end
 
-    # Scans the :message: to find out if the parenthesis are matched.
-    # Raises UnbalancedClosingParenthesis exception if there is not matched closing
+    # Scans the +message+ to find out if the parenthesis are matched.
+    # Raises UnbalancedClosingParenthesis exception if there is a not matched closing
     # parenthesis. The message of the exception contains the string with the
     # unmatched parenthesis highlighted.
-    # Raises UnbalancedOpeningParenthesis exception if there is not matched opening
+    # Raises UnbalancedOpeningParenthesis exception if there is a not matched opening
     # parenthesis.
     def check_parenthesis(message)
       count = 0
       message.scan(/[()]/) do |char|
         count += (char == "(" ?  1 : -1)
         if count < 0
+          # this *is* thread safe
           position = $~.offset(0)[0]
           raise UnbalancedClosingParenthesis.
             new((position > 1 ? message[0...position] : "") +
@@ -156,7 +174,7 @@ module Cyc
 
     # Sends a raw message to the Cyc server. The user is
     # responsible for receiving the answer by calling
-    # +receive_answer+ or +receive_raw_answer+.
+    # receive_answer or receive_raw_answer.
     def send_message(message)
       check_parenthesis(message)
       puts "Send: #{message}" if @debug
@@ -176,17 +194,12 @@ module Cyc
             current_result = receive_answer(options) || []
             result.concat(current_result)
           end
-        # rescue CycError => ex
-        # is this really necessary?
-        # shouldn't this be rescued in upper scope instead?
-          # puts ex.to_s
-          # return nil
         end
         return result
       end
     end
 
-    # Receives raw answer from server. If a +block+ is given
+    # Receives raw answer from server. If a block is given
     # the answer is yield to the block, otherwise the answer is returned.
     def receive_raw_answer(options={})
       status, answer, last_message = connection{|c| c.read}
@@ -206,11 +219,12 @@ module Cyc
     # are translated into corresponding calls for Cyc server.
     #
     # E.g. if users initializes the client and calls some Ruby method
+    #
     #   cyc = Cyc::Client.new
     #   cyc.genls? :Dog, :Animal
     #
     # He/She returns a parsed answer from the server:
-    #   => "T"
+    #   => true
     #
     # Since dashes are not allowed in Ruby method names they are replaced
     # with underscores:
@@ -223,7 +237,7 @@ module Cyc
     #
     # As you see the Ruby symbols are translated into Cyc terms (not Cyc symbols!).
     #
-    # It is also possible to nest the calls to build more complex functions:
+    # It is also possible to nest the calls to build more complex calls:
     #
     #   cyc.with_any_mt do |cyc|
     #     cyc.min_genls :Dog
@@ -238,11 +252,9 @@ module Cyc
       builder.send(name,*args,&block)
       talk(builder.to_cyc)
     end
-    protected
-    attr_accessor :conn
   end
 
-  module ThreadSafeClientExtension
+  module ThreadSafeClientExtension #:nodoc:
     THR_VAR_TEMLPATE='_cyc_client_$%s_%s'
 
     def self.extend_object(obj)
