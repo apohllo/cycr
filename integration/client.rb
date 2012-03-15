@@ -49,7 +49,7 @@ end
 
 describe Cyc::Client do
   include_examples Cyc::Client
-  
+
   it "should have socket driver" do
     @client.driver.type.should == :socket
   end
@@ -102,18 +102,18 @@ if defined? Cyc::Connection::SynchronyDriver
     # but tests aync nature of Fibers and composite results (subseq x)
     it "should have consistent results running long query in separate fibers" do
       @fiber = Fiber.current
-      togo = 0
+      done = 0
       size = ('A'..'Z').to_a.each do |char|
         Fiber.new do
           result_size = @client.fi_complete(char).each do |value|
             value.to_s[0].upcase.should == char
           end.length
           result_size.should > 0
-          togo+= 1
+          done += 1
           EM.next_tick { @fiber.resume }
         end.resume
       end.size
-      while togo < size
+      while done < size
         @fiber = Fiber.current
         Fiber.yield
       end
@@ -122,7 +122,7 @@ if defined? Cyc::Connection::SynchronyDriver
 end
 
 describe "client thread concurrency" do
-  
+
   before(:all) do
     Cyc::Connection.driver = Cyc::Connection::SocketDriver
     @client = Cyc::Client.new :thread_safe => true
@@ -139,18 +139,18 @@ describe "client thread concurrency" do
 
   it "should have consistent results running long query in separate threads" do
     results = {}
-    m = Mutex.new
+    mutex = Mutex.new
     ('A'..'Z').map do |char|
       Thread.new do
         Thread.pass
-        res = @client.fi_complete char
+        result = @client.fi_complete char
         @client.close
-        m.synchronize { results[char] = res }
+        mutex.synchronize { results[char] = result }
       end
     end.each {|t| t.join }
-    results.each_pair do |char, res|
-      res.should_not == nil
-      size = res.each do |value|
+    results.each_pair do |char, result|
+      result.should_not == nil
+      size = result.each do |value|
         value.to_s[0].upcase.should == char
       end.length
       size.should > 0
@@ -160,17 +160,6 @@ describe "client thread concurrency" do
 end
 
 describe "client multiple processes" do
-  
-  it "should have socket driver" do
-    @client.driver.type.should == :socket
-  end
-
-  it "should allow multiple processes to use the client" do
-    fork { @client.find_constant("Cat").should == :Cat }
-    fork { @client.find_constant("Dog").should == :Dog }
-    @client.find_constant("Animal").should == :Animal
-    Process.waitall
-  end
 
   before(:all) do
     Cyc::Connection.driver = Cyc::Connection::SocketDriver
@@ -180,6 +169,17 @@ describe "client multiple processes" do
 
   after(:each) do
     @client.close
+  end
+
+  it "should have socket driver" do
+    @client.driver.type.should == :socket
+  end
+
+  it "should allow multiple processes to use the client" do
+    fork { @client.find_constant("Cat").should == :Cat }
+    fork { @client.find_constant("Dog").should == :Dog }
+    @client.find_constant("Animal").should == :Animal
+    Process.waitall
   end
 
 end
