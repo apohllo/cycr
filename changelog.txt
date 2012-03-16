@@ -1,3 +1,18 @@
+0.2.0
+- Rake task for changelog
+- Support for Ruby 1.8 dropped
+- Remove support for Client.new(host,port) syntax (use options instead)
+- Documentation updates.
+- Fix README formatting
+- :host & :port options added to client constructor
+- Fixed multiprocess tests
+- Removal of unused code
+- Early detect broken connection to allow conn.write again; connected? return value
+- Client reuses driver connection while reconnecting
+- Client#check_parenthesis much faster
+- Parser: include NIL in results - missing NILs may brake partial results
+- Thread safety support
+- Cyc::Client rework to allow multiple connection drivers
 0.1.0
 - Add license info to some files
 - Add tests to Rakefile
