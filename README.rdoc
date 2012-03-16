@@ -1,35 +1,52 @@
 = cycr
 
-* http://github.com/apohllo/cycr
+* http://github.com/apohllo/cycr - code
+* http://rubydoc.info/gems/cycr/frames - documentation
 
-= DESCRIPTION
+== DESCRIPTION
 
-'cycr' is a Ruby client for the (Open)Cyc server http://www.opencyc.org.
+*cycr* is a Ruby client for the (Open)Cyc server http://www.opencyc.org.
 
-= FEATURES/PROBLEMS
+== FEATURES
 
 * The text protocol is used to talk with Cyc
 * Ruby symbols are converted to Cyc terms
 * Ruby arrays are converted to SubL arrays
 * Ruby calls on the client are transparently translated to SubL
-* Support for subcalls (like 'with-any-mt')
-* Support for NARTs might not be fully functional (but works somehow)
+* Support for subcalls (like +with-any-mt+)
+* connection drivers: regular socket and synchrony based communication
+* auto reconnecting the client after server downtime
+* thread safe client as an option
+
+== PROBLEMS
+
+* Support for NARTs might not be fully functional (works only with ResearchCyc)
 * Support for CycL queries not implemented yet!
 
-= SYNOPSIS
+== SYNOPSIS
 
-'cycr' is a Ruby client for the (Open)Cyc server. It is designed as a
+*cycr* is a Ruby client for the (Open)Cyc server. It is designed as a
 substitution for the original Java client. It allows for conversation
 with the ontology with regular Ruby objects (like symbols, arrays) 
-and also exposes the raw text protocol.
+and also exposes a raw text protocol.
 
-= REQUIREMENTS
+If you use this library you might be intereste in:
+
+* https://github.com/apohllo/cyc-console - replacement for Cyc console
+* https://github.com/apohllo/navicyc - Rails and ExtJS replacement for Cyc browser
+
+
+== REQUIREMENTS
 
 (Open)Cyc server with TCP communication enabled.
 
-= INSTALL
+== INSTALL
 
-You need RubyGems v.1.3.5 at least:
+The gem is available at rubygems.org, so you can install it with:
+
+  $ sudo gem install cycr
+
+In case of problems just make sure that you have RubyGems v.1.3.5 at least:
 
   $ gem -v
   1.2.0 # => not OK
@@ -38,60 +55,65 @@ You need RubyGems v.1.3.5 at least:
   $ gem -v 
   1.3.7 # => OK
 
-The gem is available at rubygems.org, so you can install it with:
-
-  $ sudo gem install cycr
 
 == BASIC USAGE
 
 Prerequisites:
 
-* Cyc server is running - you can download it from http://www.opencyc.org
-* Telnet connection is on
-  type +(enable-tcp-server :cyc-api 3601)+ in the cyc console 
+* running Cyc server - you can download it from http://www.opencyc.org
+* Telnet connection is turned on.
+  Type +(enable-tcp-server :cyc-api 3601)+ in the cyc console 
   or Cyc Browser -> Tools -> Interactor
 
-The you can start 'irb' to see it in action:
+Then you can start +irb+ session to see it in action.
 
-  $ irb
-  # include the cycr gem
+Include the cycr gem first
+
   require 'cycr'
 
-  # create the cyc client object, default host: localhost, port: 3601
+Create a cyc client object, default host: localhost, port: 3601
+
   cyc = Cyc::Client.new
 
-  # check if Dog generalizes to Animal
+Check if Dog generalizes to Animal
+
   cyc.genls? :Dog, :Animal # => true
 
-  # check if Animal generalizes to Dog
+Check if Animal generalizes to Dog
+
   cyc.genls? :Animal, :Dog # => nil
 
-  # check the minimal generalizations of Animal
+Check the minimal generalizations of Animal
+
   genls = cyc.min_genls :Animal
   # => [:"Organism-Whole", :"PerceptualAgent-Embodied",
-    :"Agent-NonArtifactual", :SolidTangibleThing, [:CollectionUnionFn,
-    [:TheSet, :Animal, [:GroupFn, :Animal]]],...
+  #  :"Agent-NonArtifactual", :SolidTangibleThing, [:CollectionUnionFn,
+  #  [:TheSet, :Animal, [:GroupFn, :Animal]]],...
 
-  # check the maximal specializations of the first of the above results
+Check the maximal specializations of the first of the above results
+
   cyc.max_specs genls.first
   # => [:Microorganism, :EukaryoticOrganism, :"Unvaccinated-Generic",
-    :"Vaccinated-Generic", :MulticellularOrganism, :Heterotroph, :Autotroph,
-    :Lichen, :TerrestrialOrganism, :Animal, :AquaticOrganism, :Mutant,
-    :Carnivore, :Extraterrestrial, :"Exotic-Foreign",...
+  #  :"Vaccinated-Generic", :MulticellularOrganism, :Heterotroph, :Autotroph,
+  #  :Lichen, :TerrestrialOrganism, :Animal, :AquaticOrganism, :Mutant,
+  #  :Carnivore, :Extraterrestrial, :"Exotic-Foreign",...
 
-  # It works with NARTs (but I didn't tested this functionality extensively,
-  # so this might cause some problems - beware):
+It works with NARTs (but I didn't tested this functionality extensively,
+so this might cause some problems - beware):
+
   genls[4]
   # => [:CollectionUnionFn, [:TheSet, :Animal, [:GroupFn, :Animal]]]
 
   cyc.max_specs genls[4]
   # => [:Animal, [:GroupFn, :Animal]]
 
-  # What is more, you might even build complex subcalls, such as:
+What is more, you might even build complex subcalls, such as:
+
   cyc.genls? :Person, :HomoSapiens # => nil
   cyc.with_any_mt{|cyc| cyc.genls? :Person, :HomoSapiens} # => true
 
-  # The assertions are parsed, as well as Cyc symbols and variables
+The assertions are parsed, as well as Cyc symbols and variables
+
   keys = cyc.key_predicate_rule_index :isa
   # => [:POS, :NEG]
   keys[0].class
@@ -105,8 +127,8 @@ The you can start 'irb' to see it in action:
   # => [:BACKWARD]
   rules = cyc.gather_predicate_rule_index :isa, keys[0], keys1[2], keys2[0]
   # => [[:implies, [:and, [:objectOfPossessionTransfer, :TheBuying, ?OBJ], 
-        [:activityObjectType, :TheSelectingAProduct, ?PREFERED]], 
-        [:isa, ?OBJ, ?PREFERED]] : BuyingMt]
+  #     [:activityObjectType, :TheSelectingAProduct, ?PREFERED]], 
+  #     [:isa, ?OBJ, ?PREFERED]] : BuyingMt]
   cyc.assertion_p rules[0]
   # => true
 
@@ -114,28 +136,62 @@ The you can start 'irb' to see it in action:
   # => ?OBJ
   rules[0].formula[1][1][2].class
   # => Cyc::Variable
-  # the variable cannot be checked for type, since it won't be bound
+
+The variable cannot be checked for type, since it won't be bound.
 
 
-  # If you want to see the query which is send to Cyc, just turn on
-  # debugging:
+If you want to see the query which is send to Cyc, just turn on
+debugging:
+
   cyc.debug = true
-  cyc.genls? :Dog, :Anial
+  cyc.genls? :Dog, :Animal
   # Send: (genls? #$Dog #$Animal)
   # Recv: 200 T
   # => true 
 
-  # The same way, you can turn it off:
+The same way, you can turn it off:
+
   cyc.debug = false
 
-  # Remember to close the client on exit
+Remember to close the client on exit
+
   cyc.close
+
+By default a Cyc client uses regular TCP socket communication and is not 
+thread safe. To turn-on thread-safety pass a +thread_safe+ option to the 
+constructor:
+ 
+  cyc = Cyc::Client.new(:thread_safe => true)
+
+Alternatively you can use a client with fibers and Event Machine synchrony 
+To set-up event machine driver before requiring +cycr+:
+
+  require 'cyc/connection/synchrony'
+  require 'cycr'
+
+Make sure that you have 'em-synchrony' gem installed. A sample code looks as
+follows:
+
+  EM.synchrony do
+    cyc = EM::Synchrony::ConnectionPool.new(size => 5) do
+      Cyc::Client.new :url => 'cyc://localhost:3601', :debug => true
+    end
+    Fiber.new do
+      puts "Ani", cyc.fi_complete("Ani").inspect
+    end.resume
+    puts "Mi", cyc.talk('(fi-complete "Mi")').inspect
+    EM.stop
+  end
+
+`Mi` will arrive before `Ani`
+
+Warning: always use +EM::Synchrony::ConnectionPool+ to handle Fiber concurrency race conditions.
 
 == LICENSE:
  
 (The MIT/X11 License)
 
-Copyright (c) 2008-2012 Aleksander Pohl
+Copyright (c) 2008-2012 Aleksander Pohl, Rafal Michalski
 
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the

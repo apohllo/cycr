@@ -22,6 +22,9 @@ module Cyc
 
   # Error raised if the message sent to the server has
   # more closing parentheses than opening parentheses.
+  # The exception message should indicate where is the
+  # first unbalanced closing parenthesis using 'error'
+  # tag.
   class UnbalancedClosingParenthesis < CycError
   end
 
@@ -39,7 +42,7 @@ module Cyc
       @stack = stack
     end
   end
-  
+
   # Exception raised by the parser if data received from server
   # is not in expected format.
   class ProtocolError < CycError

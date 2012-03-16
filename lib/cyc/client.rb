@@ -6,7 +6,15 @@ module Cyc #:nodoc:
   # Author:: Aleksander Pohl (mailto:apohllo@o2.pl)
   # License:: MIT/X11 License
   #
-  # This class is the implementation of the Cyc server client.
+  # This class is the implementation of a Cyc client.
+  #
+  # Example:
+  #
+  #   cyc = Cyc::Client.new
+  #   cyc.genls? :Dog, :Animal # checks if Dog generalizes to Animal
+  #   #=> true
+  #   cyc.genls? :Animal, :Dog # checks if Animal generalizes to Dog
+  #   #=> nil
   class Client
     # If set to true, all communication with the server is logged
     # to standard output
@@ -35,11 +43,11 @@ module Cyc #:nodoc:
     #   Cyc::Client.new [options = {}]
     #
     # options:
-    # - +:host+ = 'localhost'   server address
+    # - +:host+ = +localhost+   server address
     # - +:port+ = +3601+        server port
     # - +:debug+ = +false+      initial debug flag
     # - +:timeout+ = +0.2+      connection timeout in seconds
-    # - +:url+ (String):        'cyc://host:port' overrides +:host+, +:port+
+    # - +:url+ (String):        +cyc://host:port+ overrides +:host+, +:port+
     # - +:driver+ (Class) = Cyc::Connection::Socket  client connection driver class
     # - +:thread_safe+ = +true+   set to +true+ if you want to share client between
     #   threads

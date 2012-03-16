@@ -2,7 +2,7 @@ module Cyc
   # Author:: Aleksander Pohl (mailto:apohllo@o2.pl)
   # License:: MIT/X11 License
   #
-  # This class represent the Cyc assertions.
+  # This class represent a Cyc assertion.
   class Assertion
     # The logical formula of the assertion.
     attr_reader :formula

@@ -5,8 +5,10 @@ module Cyc #:nodoc:
     # Author:: Rafal Michalski (mailto:royaltm75@gmail.com)
     # Licence:: MIT/X11 License
     #
-    # DataBuffer is chunky text data to server answer assembly class
+    # DataBuffer is chunky text data to server answer assembly class.
+    #
     # Usage:
+    #
     #   b = DataBuffer.new
     #   b << "200 Some response\n" << "300 Some other" << " response\n" << "additional data\n"
     #   b.next_result

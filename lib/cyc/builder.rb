@@ -2,9 +2,9 @@ module Cyc
   # This class is used to capture calls to the Cyc client, to allow
   # nested calls, like
   #
-  # cyc.with_any_mt do |cyc|
-  #   cyc.comment :Collection
-  # end
+  #   cyc.with_any_mt do |cyc|
+  #     cyc.comment :Collection
+  #   end
   class Builder
     def initialize
       reset
