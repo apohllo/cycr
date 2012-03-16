@@ -1,3 +1,6 @@
+$:.unshift "lib"
+require 'cyc/version'
+
 task :default => [:test]
 
 $gem_name = "cycr"
@@ -28,4 +31,9 @@ end
 desc "Clean"
 task :clean do
   sh "rm #$gem_name*.gem" 
+end
+
+desc "Show changelog from the last release"
+task :changelog do
+  sh "git log v#{Cyc::VERSION}.. --pretty=%s | tee"
 end
