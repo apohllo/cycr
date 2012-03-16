@@ -28,9 +28,9 @@ module Cyc #:nodoc:
       end
 
       # Connects to the server on +host+ and +port+ with given
-      # connection time-out.
-      def connect(host, port, conn_timeout=0.2)
-        with_timeout(conn_timeout.to_f) do
+      # connection +timeout+.
+      def connect(host, port, timeout=0.2)
+        with_timeout(timeout.to_f) do
           @sock = TCPSocket.new(host, port)
           @sock.sync = true
           @sock.binmode
@@ -60,7 +60,7 @@ module Cyc #:nodoc:
         end
       end
 
-      # Read a message from the server.
+      # Read next message from the server.
       def read
         begin
           @buffer << @sock.readpartial(4096)
