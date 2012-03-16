@@ -2,26 +2,33 @@ require "socket"
 require "cyc/connection/driver"
 require "cyc/exception"
 require "cyc/connection/buffer"
-# TCPSocket Cyc::Client driver
-# Author:: Rafal Michalski (mailto:royaltm75@gmail.com)
-# Licence:: MIT/X11 License
-#
-# Default driver for Cyc::Client.
-#
-module Cyc
-  module Connection
+
+module Cyc #:nodoc:
+  module Connection #:nodoc:
+    # TCPSocket Cyc::Client driver
+    # Author:: Rafal Michalski (mailto:royaltm75@gmail.com)
+    # Licence:: MIT/X11 License
+    #
+    # Default driver for Cyc::Client.
+    #
     class SocketDriver
+      # The type of the driver, i.e. +:socket+.
       def self.type; :socket; end
+
+      # Initialize a new driver.
       def initialize
         @sock = nil
         @buffer = DataBuffer.new
-        @meta = nil
+        @last_message = nil
       end
 
+      # Returns true if the driver is connected to the server.
       def connected?
         !! @sock
       end
 
+      # Connects to the server on +host+ and +port+ with given
+      # connection time-out.
       def connect(host, port, conn_timeout=0.2)
         with_timeout(conn_timeout.to_f) do
           @sock = TCPSocket.new(host, port)
@@ -31,16 +38,19 @@ module Cyc
         end
       end
 
+      # Disconnects the driver from the server.
       def disconnect
         @sock.close if @sock
       rescue
+        # This should go to log #2.
       ensure
         @sock = nil
         @buffer.discard!
       end
 
+      # Send a message to the server.
       def write(rawmsg)
-        @meta = rawmsg
+        @last_message = rawmsg
         @sock.write(rawmsg + EOL)
         # ensure that the connection is still with a server
         # and wait for an answer at the same time
@@ -50,11 +60,12 @@ module Cyc
         end
       end
 
+      # Read a message from the server.
       def read
         begin
           @buffer << @sock.readpartial(4096)
-        end until result = @buffer.next_result(@meta)
-        result << @meta
+        end until result = @buffer.next_result(@last_message)
+        result << @last_message
       rescue IOError, EOFError, Errno::ECONNRESET
         disconnect
         raise Errno::ECONNRESET
