@@ -82,12 +82,6 @@ module Cyc #:nodoc:
         end
 
       rescue LoadError
-        if ! defined?(RUBY_ENGINE)
-          # MRI 1.8, all other interpreters define RUBY_ENGINE, JRuby and
-          # Rubinius should have no issues with timeout.
-          warn "WARNING: using the built-in Timeout class which is known to have issues when used for opening connections. Install the SystemTimer gem if you want to make sure the Redis client will not hang."
-        end
-
         require "timeout"
 
         def with_timeout(seconds, &block)
