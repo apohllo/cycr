@@ -36,10 +36,10 @@ module Cyc #:nodoc:
     #
     # options:
     # - +:host+ = 'localhost'   server address
-    # - +:port+ = +3601+          server port
-    # - +:debug+ = +false+        initial debug flag
-    # - +:conn_timeout+ = +0.2+   connection timeout in seconds
-    # - +:url+ (String):          'cyc://host:port' overrides +:host+, +:port+
+    # - +:port+ = +3601+        server port
+    # - +:debug+ = +false+      initial debug flag
+    # - +:timeout+ = +0.2+      connection timeout in seconds
+    # - +:url+ (String):        'cyc://host:port' overrides +:host+, +:port+
     # - +:driver+ (Class) = Cyc::Connection::Socket  client connection driver class
     # - +:thread_safe+ = +true+   set to +true+ if you want to share client between
     #   threads
@@ -48,37 +48,26 @@ module Cyc #:nodoc:
     #   Cyc::Client.new
     #   Cyc::Client.new :host => 'cyc.example', :port => 3661, :debug => true
     #   Cyc::Client.new :debug => true, :url => 'cyc://localhost/3661',
-    #     :conn_timeout => 1.5, :driver => Cyc::Connection::SynchronyDriver
+    #     :timeout => 1.5, :driver => Cyc::Connection::SynchronyDriver
     #
     # Thread safe client:
     #   Cyc::Client.new :thread_safe => true
-    def initialize(host="localhost", port=3601, options=false)
+    def initialize(options={})
       @pid = Process.pid
-      @conn_timeout = 0.2
-      @driver = Connection.driver
-      if Hash === host
-        options, host = host, nil
-      elsif Hash === port
-        options, port = port, nil
+      unless Hash === options
+        raise ArgumentError.new("The Client.new(host,port) API is no longer supported.")
       end
-      if Hash === options
-        host = options[:host] if options.key? :host
-        port = options[:port] if options.key? :port
-        if url = options[:url]
-          url = URI.parse(url)
-          host = url.host || host
-          port = url.port || port
-        end
-        @conn_timeout = options[:conn_timeout].to_f if options.key? :conn_timeout
-        @driver = options[:driver] if options.key? :driver
-        @debug = !!options[:debug]
-        @thread_safe = !!options[:thread_safe]
-      else
-        @debug = !!options
-        @thread_safe = false
+      @host = options[:host] || "localhost"
+      @port = (options[:port] || 3601).to_i
+      if url = options[:url]
+        url = URI.parse(url)
+        @host = url.host || @host
+        @port = url.port || @port
       end
-      @host = host || "localhost"
-      @port = (port || 3601).to_i
+      @timeout = (options[:timeout] || 0.2).to_f
+      @driver = options[:driver] || Connection.driver
+      @debug = !!options[:debug]
+      @thread_safe = !!options[:thread_safe]
 
       if @thread_safe
         self.extend ThreadSafeClientExtension
@@ -100,7 +89,7 @@ module Cyc #:nodoc:
       conn.disconnect if connected?
       @pid = Process.pid
       puts "connecting: #@host:#@port $$#@pid" if @debug
-      conn.connect(@host, @port, @conn_timeout)
+      conn.connect(@host, @port, @timeout)
       self
     end
 
