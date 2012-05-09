@@ -27,6 +27,12 @@ class Fixnum
   end
 end
 
+class Proc
+  def to_cyc(raw=false)
+    self.call.to_s
+  end
+end
+
 module Cyc
   class LiteralString < String
     def to_cyc(raw=false)
