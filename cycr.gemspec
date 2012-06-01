@@ -19,4 +19,5 @@ Gem::Specification.new do |s|
   s.extra_rdoc_files = ["README.rdoc"]
   s.add_development_dependency("rspec", ["~> 2.8.0"])
   s.add_development_dependency("em-synchrony", ["~> 1.0.0"])
+  s.add_dependency("ref", ["~> 1.0.0"])
 end
