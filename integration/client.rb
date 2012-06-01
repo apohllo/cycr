@@ -45,6 +45,20 @@ shared_examples Cyc::Client do
     @client.talk('(gather-predicate-extent-index #$minimizeExtent)').size.should > 100
   end
 
+  it "should allow to use cached results" do
+    @client.cache_enabled = true
+    start_time = Time.now
+    @client.specs(:Animal).size.should > 100
+    end_time = Time.now
+    duration1 = end_time - start_time
+    start_time = Time.now
+    100.times{ @client.specs(:Animal).size.should > 100}
+    end_time = Time.now
+    duration2 = end_time - start_time
+    duration2.should < duration1
+    @client.cache_enabled = false
+  end
+
 end
 
 describe Cyc::Client do

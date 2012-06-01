@@ -1,6 +1,7 @@
 require 'uri'
 require 'cyc/connection'
 require 'cyc/exception'
+require 'cyc/cache'
 
 module Cyc #:nodoc:
   # Author:: Aleksander Pohl (mailto:apohllo@o2.pl)
@@ -19,6 +20,14 @@ module Cyc #:nodoc:
     # If set to true, all communication with the server is logged
     # to standard output
     attr_accessor :debug
+    #
+    # If set to true, results of the queries are cached. This is
+    # turned off by default, since there is a functional-languages
+    # assumption, that the result for the same query is always the
+    # same, but this might not be true in case of Cyc (however
+    # highly probable). The cache is used only in the +talk+ call
+    # (and calls based on it -- i.e. direct Cyc calls, e.g. cyc.genls :Dog).
+    attr_accessor :cache_enabled
 
     # The +host+ the client connects to.
     attr_reader :host
@@ -46,6 +55,7 @@ module Cyc #:nodoc:
     # - +:host+ = +localhost+   server address
     # - +:port+ = +3601+        server port
     # - +:debug+ = +false+      initial debug flag
+    # - +:cache+ = +false+      initial cache enabled flag
     # - +:timeout+ = +0.2+      connection timeout in seconds
     # - +:url+ (String):        +cyc://host:port+ overrides +:host+, +:port+
     # - +:driver+ (Class) = Cyc::Connection::Socket  client connection driver class
@@ -75,6 +85,8 @@ module Cyc #:nodoc:
       @timeout = (options[:timeout] || 0.2).to_f
       @driver = options[:driver] || Connection.driver
       @debug = !!options[:debug]
+      @cache_enabled = !!options[:cache]
+      @cache = Cache.new
       @thread_safe = !!options[:thread_safe]
 
       if @thread_safe
@@ -137,8 +149,15 @@ module Cyc #:nodoc:
 
     # Sends the +messsage+ to the Cyc server and returns a parsed answer.
     def talk(message, options={})
+      if @cache_enabled && @cache[message]
+        return @cache[message]
+      end
       send_message(message)
-      receive_answer(options)
+      result = receive_answer(options)
+      if @cache_enabled
+        @cache[message] = result
+      end
+      result
     end
 
     # Sends the +message+ to the Cyc server and
