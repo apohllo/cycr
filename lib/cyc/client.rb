@@ -28,6 +28,11 @@ module Cyc #:nodoc:
     # highly probable). The cache is used only in the +talk+ call
     # (and calls based on it -- i.e. direct Cyc calls, e.g. cyc.genls :Dog).
     attr_accessor :cache_enabled
+    
+    # The +cache+ instance of a client.
+    # You may call +clear+ on it to clear cache's content,
+    # You may copy it's reference to the other client instances.
+    attr_accessor :cache
 
     # The +host+ the client connects to.
     attr_reader :host
@@ -55,7 +60,7 @@ module Cyc #:nodoc:
     # - +:host+ = +localhost+   server address
     # - +:port+ = +3601+        server port
     # - +:debug+ = +false+      initial debug flag
-    # - +:cache+ = +false+      initial cache enabled flag
+    # - +:cache+ = +false+      initial cache enabled flag or external cache instance
     # - +:timeout+ = +0.2+      connection timeout in seconds
     # - +:url+ (String):        +cyc://host:port+ overrides +:host+, +:port+
     # - +:driver+ (Class) = Cyc::Connection::Socket  client connection driver class
@@ -85,8 +90,9 @@ module Cyc #:nodoc:
       @timeout = (options[:timeout] || 0.2).to_f
       @driver = options[:driver] || Connection.driver
       @debug = !!options[:debug]
-      @cache_enabled = !!options[:cache]
-      @cache = Cache.new
+      cache = options[:cache]
+      @cache_enabled = !!cache
+      @cache = cache.respond_to?(:cached_value) ? cache || Cache.new
       @thread_safe = !!options[:thread_safe]
 
       if @thread_safe
@@ -149,15 +155,15 @@ module Cyc #:nodoc:
 
     # Sends the +messsage+ to the Cyc server and returns a parsed answer.
     def talk(message, options={})
-      if @cache_enabled && @cache[message]
-        return @cache[message]
+      if @cache_enabled 
+        @cache.cached_value(message) do
+          send_message(message)
+          receive_answer(options)
+        end
+      else
+        send_message(message)
+        receive_answer(options)
       end
-      send_message(message)
-      result = receive_answer(options)
-      if @cache_enabled
-        @cache[message] = result
-      end
-      result
     end
 
     # Sends the +message+ to the Cyc server and
