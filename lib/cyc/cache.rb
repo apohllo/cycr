@@ -5,6 +5,30 @@ module Cyc
     def initialize
       @soft_references = Ref::SoftValueMap.new
       @hard_references = {}
+      @in_progress = {}
+      @lock = Mutex.new
+    end
+
+    def cached_value(key)
+      monitor = value = nil
+      @lock.synchronize do
+        if @hard_references.has_key?(key)
+          return @hard_references[key]
+        elsif (value = @soft_references[key])
+          return value
+        elsif (monitor = @in_progress[key])
+          monitor.wait(@lock)
+          return self[key]
+        end
+        @in_progress[key] = monitor = ConditionVariable.new
+      end
+      value = yield
+      @lock.synchronize do
+        self[key] = value
+        @in_progress.delete key
+        monitor.broadcast
+      end
+      value
     end
 
     # Get a value from cache.
@@ -30,8 +54,10 @@ module Cyc
 
     # Clear the cache.
     def clear
-      @soft_references.clear
-      @hard_references.clear
+      @lock.synchronize do
+        @soft_references.clear
+        @hard_references.clear
+      end
     end
   end
 end
