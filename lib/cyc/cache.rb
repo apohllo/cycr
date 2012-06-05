@@ -1,3 +1,4 @@
+require 'thread'
 require 'ref'
 
 module Cyc
@@ -9,6 +10,7 @@ module Cyc
       @lock = Mutex.new
     end
 
+    # Get cached value of a key or generate new one using given block
     def cached_value(key)
       monitor = value = nil
       @lock.synchronize do
