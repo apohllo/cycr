@@ -28,7 +28,7 @@ module Cyc #:nodoc:
     # highly probable). The cache is used only in the +talk+ call
     # (and calls based on it -- i.e. direct Cyc calls, e.g. cyc.genls :Dog).
     attr_accessor :cache_enabled
-    
+
     # The +cache+ instance of a client.
     # You may call +clear+ on it to clear cache's content,
     # You may copy it's reference to the other client instances.
@@ -92,7 +92,7 @@ module Cyc #:nodoc:
       @debug = !!options[:debug]
       cache = options[:cache]
       @cache_enabled = !!cache
-      @cache = cache.respond_to?(:cached_value) ? cache || Cache.new
+      @cache = cache.respond_to?(:cached_value) ? cache : Cache.new
       @thread_safe = !!options[:thread_safe]
 
       if @thread_safe
@@ -155,7 +155,7 @@ module Cyc #:nodoc:
 
     # Sends the +messsage+ to the Cyc server and returns a parsed answer.
     def talk(message, options={})
-      if @cache_enabled 
+      if @cache_enabled
         @cache.cached_value(message) do
           send_message(message)
           receive_answer(options)
