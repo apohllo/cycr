@@ -45,7 +45,7 @@ module Cyc
     # Put a value for a given key to the cache.
     def []=(key,value)
       case value
-      when TrueClass,FalseClass,NilClass,Fixnum,Symbol
+      when TrueClass,FalseClass,NilClass,Fixnum,::Symbol
         @soft_references.delete(key)
         @hard_references[key] = value
       else
