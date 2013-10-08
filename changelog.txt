@@ -1,3 +1,5 @@
+0.2.3
+- Use find-nart instead of el-find-if-nart (OpenCyc comp)
 0.2.2
 - Fix invalid use of ? expression
 - Fix unscoped reference to Symbol in Cache

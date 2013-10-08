@@ -16,7 +16,7 @@ class Array
     if raw
       contents
     else
-      "(el-find-if-nart '#{contents})"
+      "(find-nart '#{contents})"
     end
   end
 end
