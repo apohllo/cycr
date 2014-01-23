@@ -1,6 +1,6 @@
 class String
   def to_cyc(raw=false)
-    "\"#{self}\""
+    "\"#{self.gsub('\\','\\\\\\\\').gsub('"','\\\\"')}\""
   end
 end
 

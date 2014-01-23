@@ -1,3 +1,5 @@
+0.2.5
+- Escape backslash and quote in string literals
 0.2.3
 - Use find-nart instead of el-find-if-nart (OpenCyc comp)
 0.2.2
