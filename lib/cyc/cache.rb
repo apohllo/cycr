@@ -24,7 +24,10 @@ module Cyc
         end
         @in_progress[key] = monitor = ConditionVariable.new
       end
+      begin
       value = yield
+      rescue CycError
+      end
       @lock.synchronize do
         self[key] = value
         @in_progress.delete key
