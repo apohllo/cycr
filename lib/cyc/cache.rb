@@ -25,17 +25,27 @@ module Cyc
         @in_progress[key] = monitor = ConditionVariable.new
       end
       begin
-      value = yield
-      rescue CycError
-      end
-      @lock.synchronize do
-        self[key] = value
-        @in_progress.delete key
-        monitor.broadcast
+        value = yield
+        value_set = true
+      ensure
+        @lock.synchronize do
+          self[key] = value if value_set
+          @in_progress.delete key
+          monitor.broadcast
+        end
       end
       value
     end
 
+    # Clear the cache.
+    def clear
+      @lock.synchronize do
+        @soft_references.clear
+        @hard_references.clear
+      end
+    end
+
+    private
     # Get a value from cache.
     def [](key)
       if @hard_references.has_key?(key)
@@ -54,14 +64,6 @@ module Cyc
       else
         @hard_references.delete(key)
         @soft_references[key] = value
-      end
-    end
-
-    # Clear the cache.
-    def clear
-      @lock.synchronize do
-        @soft_references.clear
-        @hard_references.clear
       end
     end
   end
