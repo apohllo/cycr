@@ -117,7 +117,7 @@ if defined? Cyc::Connection::SynchronyDriver
     it "should have consistent results running long query in separate fibers" do
       @fiber = Fiber.current
       done = 0
-      size = ('A'..'Z').to_a.each do |char|
+      size = ('A'..'C').to_a.each do |char|
         Fiber.new do
           result_size = @client.fi_complete(char).each do |value|
             value.to_s[0].upcase.should == char
@@ -154,7 +154,7 @@ describe "client thread concurrency" do
   it "should have consistent results running long query in separate threads" do
     results = {}
     mutex = Mutex.new
-    ('A'..'Z').map do |char|
+    ('A'..'C').map do |char|
       Thread.new do
         Thread.pass
         result = @client.fi_complete char
