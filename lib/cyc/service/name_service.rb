@@ -103,6 +103,7 @@ module Cyc
         end
       end
 
+      private
       # Extracts term name from a result that might be either Lisp pair or Lisp
       # list.
       def extract_term_name(expression)
@@ -113,7 +114,6 @@ module Cyc
         end
       end
 
-      private
       # Transliterate non-ascii characters.
       def transliterate(string)
         Iconv.iconv('ascii//translit//ignore', 'utf-8', string).join("")
